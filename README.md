@@ -16,9 +16,9 @@
 
 ![My Agnes Studio · 图像 Demo](image_demo.png)
 
-### 🎬 **[▶ 点击播放 Demo 视频](./video_demo.mp4)**
+### 🎬 **[▶ 点击观看 Demo 视频](https://github.com/onemadefree/AgnesStudio/issues/1)**
 
-> 💡 视频约 10 秒 · 2.5 MB · GitHub 不允许在 README 内联播放 mp4，点击链接浏览器内置播放器打开
+> 💡 视频约 10 秒 · 2.5 MB · GitHub 不允许在 README 内联播放 mp4，点击跳到 Issue #1 看完整演示（已上传附件）
 
 ---
 
