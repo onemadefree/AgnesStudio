@@ -99,6 +99,7 @@ agnes-studio/
 ├── AGENTS.md                   ← AI 助手项目遵循文档（备份规则 / API 协议 / 变更记录）
 ├── SPEC.md                     ← 功能规格文档（数据模型 / 改点速查 / 陷阱清单）
 ├── agnes-studio.html           ← 🔴 主文件（≈152 KB / 4063 行，单文件 SPA）
+├── demo.png                    ← README 顶部 Demo 截图
 ├── docs/                       ← Agnes 官方 API 文档离线副本
 │   ├── agnes-2.0-flash.md
 │   ├── agnes-image-2.1-flash.md
