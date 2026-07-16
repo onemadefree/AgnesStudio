@@ -1,0 +1,4079 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Agnes Studio · 我的无限画布</title>
+<style>
+  :root {
+    --bg-0: #0b0d12;
+    --bg-1: #11141b;
+    --bg-2: #161a23;
+    --bg-3: #1d2230;
+    --bg-4: #262c3b;
+    --line: #2a3142;
+    --line-2: #353d52;
+    --text-0: #e6e9f2;
+    --text-1: #b6bccd;
+    --text-2: #8089a0;
+    --text-3: #5b6478;
+    --brand: #5b8bff;
+    --brand-2: #4070e6;
+    --brand-soft: rgba(91,139,255,0.15);
+    --ok: #4dd49a;
+    --warn: #f0b95e;
+    --err: #f06b6b;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg-0);
+    color: var(--text-0);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, textarea, select {
+    font-family: inherit; font-size: inherit;
+    color: inherit;
+  }
+  button { cursor: pointer; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--line-2); }
+
+  .app {
+    display: grid;
+    grid-template-rows: 48px 1fr;
+    grid-template-columns: 300px 1fr 340px;
+    grid-template-areas:
+      "topbar topbar topbar"
+      "left   canvas right";
+    height: 100vh;
+  }
+
+  /* Topbar */
+  .topbar {
+    grid-area: topbar;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--line);
+    gap: 16px;
+    z-index: 10;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 14px;
+    letter-spacing: 0.3px;
+  }
+  .brand-mark {
+    width: 24px; height: 24px;
+    background: linear-gradient(135deg, var(--brand), #9b6bff);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #fff; font-weight: 700;
+  }
+  .brand-text {
+    display: flex; flex-direction: column; line-height: 1.2;
+  }
+  .brand-title {
+    color: var(--text-0);
+  }
+  .brand-tagline {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-2);
+    letter-spacing: 0.2px;
+    margin-top: 2px;
+  }
+  .mode-switch {
+    display: inline-flex;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .mode-switch button {
+    background: transparent;
+    border: 0;
+    padding: 6px 14px;
+    border-radius: 6px;
+    color: var(--text-1);
+    font-weight: 500;
+    transition: all .15s;
+  }
+.mode-switch button.active {
+    background: var(--brand);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(91,139,255,0.4);
+  }
+  .mode-switch.mode-switch-block {
+    display: flex;
+    width: 100%;
+    padding: 4px;
+  }
+  .mode-switch.mode-switch-block button {
+    flex: 1;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  .top-left { display: flex; align-items: center; gap: 14px; }
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    color: var(--text-1);
+    border-radius: 6px;
+    padding: 6px 10px;
+    transition: all .15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .icon-btn:hover { background: var(--bg-3); color: var(--text-0); border-color: var(--line-2); }
+  .icon-btn.primary {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+    font-weight: 600;
+  }
+.icon-btn.primary:hover { background: var(--brand-2); }
+  .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* 运镜库 modal */
+  .camera-motion-modal-card {
+    max-width: 760px;
+    width: 90vw;
+  }
+  .cm-tabs {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    margin-bottom: 12px;
+  }
+  .cm-tab {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    color: var(--text-1);
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all .15s;
+  }
+  .cm-tab:hover { background: var(--bg-3); }
+  .cm-tab.active {
+    background: var(--brand);
+    color: #fff;
+    border-color: var(--brand);
+  }
+  .cm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    max-height: 56vh;
+    overflow-y: auto;
+    padding: 4px;
+  }
+  .cm-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all .15s;
+    position: relative;
+  }
+  .cm-card:hover {
+    border-color: var(--brand);
+    transform: translateY(-1px);
+  }
+  .cm-card.selected {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px rgba(91,139,255,0.3);
+  }
+  .cm-thumb {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: var(--bg-3) center/cover no-repeat;
+    overflow: hidden;
+  }
+  .cm-thumb img, .cm-thumb video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .cm-thumb video { display: none; }
+  .cm-card:hover .cm-thumb img { display: none; }
+  .cm-card:hover .cm-thumb video { display: block; }
+  .cm-info {
+    padding: 6px 8px;
+  }
+  .cm-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-0);
+    margin-bottom: 2px;
+  }
+  .cm-desc {
+    font-size: 10px;
+    color: var(--text-3);
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .cm-badge {
+    position: absolute;
+    top: 6px; right: 6px;
+    background: var(--brand);
+    color: #fff;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .cm-card.selected .cm-badge { opacity: 1; }
+
+  /* 已选运镜 chip */
+  .cm-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--brand-soft);
+    color: var(--brand);
+    border: 1px solid var(--brand);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+    /* 反推结果 popover（节点右侧浮层） */
+  .prompt-popover {
+    position: absolute;
+    width: 300px;
+    max-height: 60vh;
+    background: var(--bg-1);
+    border: 1px solid var(--brand);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    z-index: 50;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .prompt-popover-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--brand-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  .prompt-popover-title {
+    font-size: 12px; font-weight: 600; color: var(--brand);
+  }
+  .prompt-popover-close {
+    background: transparent; border: 0; color: var(--text-2);
+    cursor: pointer; padding: 2px 6px; border-radius: 3px; font-size: 12px;
+  }
+  .prompt-popover-close:hover { background: var(--bg-3); color: var(--text-0); }
+  .prompt-popover-body {
+    overflow-y: auto;
+    max-height: calc(60vh - 30px);
+  }
+  .pp-section {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .pp-section:last-child { border-bottom: 0; }
+  .pp-lang {
+    font-size: 10px; font-weight: 700; color: var(--text-2);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .pp-text {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-1);
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 6px 8px;
+    max-height: 140px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .pp-use {
+    margin-top: 6px;
+    background: var(--brand);
+    color: #fff;
+    border: 0;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .pp-use:hover { background: var(--brand-2); }
+
+  /* Left panel */
+  .left-panel {
+    grid-area: left;
+    background: var(--bg-1);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    padding: 14px;
+  }
+  .panel-section {
+    margin-bottom: 18px;
+  }
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-3);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-title .count {
+    color: var(--text-2);
+    font-size: 11px;
+    background: var(--bg-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .form-row { margin-bottom: 10px; }
+  .form-row label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-2);
+    margin-bottom: 4px;
+  }
+  .form-row input, .form-row select, .form-row textarea {
+    width: 100%;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text-0);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+    border-color: var(--brand);
+    background: var(--bg-3);
+  }
+  .form-row textarea {
+    min-height: 70px;
+    resize: vertical;
+    line-height: 1.5;
+    font-family: inherit;
+  }
+  .form-grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .form-grid-3 {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+  }
+  .ref-box {
+    border: 1px dashed var(--line-2);
+    border-radius: 8px;
+    padding: 8px;
+    background: var(--bg-2);
+    min-height: 56px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px;
+    color: var(--text-2);
+    flex-wrap: wrap;
+    transition: border-color .15s, background .15s;
+  }
+  .ref-box.drag-hover {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+  }
+  .ref-box .empty { color: var(--text-3); font-style: italic; }
+  .ref-thumb {
+    position: relative;
+    width: 48px; height: 48px;
+    border-radius: 6px;
+    background: var(--bg-3) center/cover no-repeat;
+    border: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+
+  /* 文本对话记录（v1.19 新增） */
+  .text-conversation {
+    display: flex; flex-direction: column; gap: 8px;
+    max-height: 360px; overflow-y: auto;
+    padding: 4px;
+  }
+  .text-msg {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .text-msg.user {
+    background: var(--brand-soft);
+    border: 1px solid var(--brand);
+    color: var(--text-0);
+  }
+  .text-msg.assistant {
+    background: var(--bg-3);
+    border: 1px solid var(--line);
+    color: var(--text-1);
+  }
+  .text-msg.system {
+    background: var(--bg-2);
+    border: 1px dashed var(--line-2);
+    color: var(--text-3);
+    font-style: italic;
+    font-size: 11px;
+  }
+  .text-msg-role {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-3);
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .text-msg-image {
+    max-width: 100%;
+    max-height: 120px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .text-msg.streaming::after {
+    content: '▍';
+    color: var(--brand);
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .ref-thumb .x {
+    position: absolute; top: -6px; right: -6px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--err);
+    color: #fff;
+    border: 0;
+    font-size: 10px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .gen-btn {
+    width: 100%;
+    background: var(--brand);
+    color: #fff;
+    border: 0;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    transition: background .15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .gen-btn:hover:not(:disabled) { background: var(--brand-2); }
+  .gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Canvas */
+  .canvas-area {
+    grid-area: canvas;
+    position: relative;
+    background:
+      radial-gradient(circle at 20px 20px, var(--bg-3) 1.5px, transparent 1.5px) 0 0/40px 40px,
+      var(--bg-0);
+    overflow: hidden;
+  }
+  .canvas-viewport {
+    position: absolute; inset: 0;
+    overflow: hidden;
+    cursor: grab;
+  }
+  .canvas-viewport.panning { cursor: grabbing; }
+  .canvas-world {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1px; height: 1px;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+  .canvas-hud {
+    position: absolute;
+    bottom: 16px; left: 16px;
+    display: flex; gap: 6px;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: var(--shadow);
+    z-index: 5;
+  }
+  .hud-btn {
+    background: transparent; border: 0;
+    color: var(--text-1);
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    transition: background .15s;
+  }
+  .hud-btn:hover { background: var(--bg-3); color: var(--text-0); }
+  .zoom-display {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+    min-width: 60px;
+    text-align: center;
+  }
+
+  /* Nodes */
+  .node {
+    position: absolute;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: border-color .15s, box-shadow .15s;
+    user-select: none;
+  }
+  .node.selected {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px rgba(91,139,255,0.3), var(--shadow);
+  }
+  .node.dragging {
+    cursor: grabbing;
+    border-color: var(--brand);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .node-header {
+    height: 28px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center;
+    padding: 0 8px;
+    gap: 6px;
+    cursor: move;
+    font-size: 11px;
+    color: var(--text-1);
+  }
+  .node-type-badge {
+    background: var(--brand-soft);
+    color: var(--brand);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .node-type-badge.video { background: rgba(155,107,255,0.15); color: #b08cff; }
+  .node-type-badge.uploaded { background: rgba(77,212,154,0.15); color: var(--ok); }
+  .node-type-badge.external { background: rgba(240,185,94,0.15); color: var(--warn); }
+  .node-actions {
+    margin-left: auto;
+    display: flex; gap: 4px;
+  }
+  .node-action {
+    background: transparent;
+    border: 0;
+    color: var(--text-2);
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+    font-size: 12px;
+  }
+  .node-action:hover { background: var(--bg-3); color: var(--text-0); }
+  .node-action.danger:hover { background: rgba(240,107,107,0.2); color: var(--err); }
+  .node-body {
+    position: relative;
+    background: var(--bg-0);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .node-body img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .node-body video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: auto;   /* 让原生控件能响应点击 */
+  }
+  .node-footer {
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text-2);
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    gap: 4px;
+  }
+  .node-footer .prompt {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .node-footer .meta-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .node-footer .meta-row .meta {
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .node-footer .meta-row .meta strong {
+    color: var(--text-1);
+    font-weight: 500;
+  }
+  .node-footer .meta-actions {
+    margin-left: auto;
+    display: flex; gap: 3px;
+  }
+  .meta-action {
+    background: var(--bg-3);
+    border: 0;
+    color: var(--text-2);
+    font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .meta-action:hover {
+    background: var(--bg-4);
+    color: var(--text-0);
+  }
+  .node-placeholder {
+    color: var(--text-3);
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+  }
+  .node-progress {
+    width: 100%;
+    height: 3px;
+    background: var(--bg-3);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .node-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--brand), #9b6bff);
+    transition: width .5s;
+  }
+
+  /* Right panel */
+  .right-panel {
+    grid-area: right;
+    background: var(--bg-1);
+    border-left: 1px solid var(--line);
+    overflow-y: auto;
+    padding: 14px;
+  }
+  .task-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    transition: border-color .15s;
+  }
+  .task-card.active { border-color: var(--brand); }
+  .task-card.completed { border-color: rgba(77,212,154,0.4); }
+  .task-card.failed { border-color: rgba(240,107,107,0.4); }
+  .task-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .task-type {
+    background: var(--brand-soft);
+    color: var(--brand);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .task-type.video { background: rgba(155,107,255,0.15); color: #b08cff; }
+  .task-status {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--bg-3);
+    color: var(--text-1);
+  }
+  .task-status.queued { color: var(--warn); }
+  .task-status.in_progress { color: var(--brand); }
+  .task-status.completed { color: var(--ok); }
+  .task-status.failed { color: var(--err); }
+  .task-prompt {
+    color: var(--text-1);
+    margin: 6px 0;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .task-progress-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 4px;
+  }
+  .task-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .task-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--brand), #9b6bff);
+    transition: width .5s;
+  }
+  .task-progress-text {
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+    min-width: 30px;
+    text-align: right;
+  }
+
+  /* Preview overlay */
+  .preview-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    padding: 40px;
+  }
+  .preview-overlay.open { display: flex; }
+  .preview-overlay img, .preview-overlay video {
+    max-width: 100%; max-height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .preview-close {
+    position: absolute;
+    top: 20px; right: 20px;
+    background: var(--bg-1);
+    color: var(--text-0);
+    border: 1px solid var(--line);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    font-size: 16px;
+  }
+  .preview-download {
+    position: absolute;
+    top: 20px; right: 70px;
+    background: var(--brand);
+    color: #fff;
+    border: 0;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+
+  /* Toast */
+  .toast-wrap {
+    position: fixed;
+    top: 60px; right: 16px;
+    z-index: 200;
+    display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--brand);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text-0);
+    box-shadow: var(--shadow);
+    min-width: 220px; max-width: 360px;
+    animation: toast-in .2s ease-out;
+    pointer-events: auto;
+  }
+  .toast.ok { border-left-color: var(--ok); }
+  .toast.warn { border-left-color: var(--warn); }
+  .toast.err { border-left-color: var(--err); }
+  @keyframes toast-in {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Modal */
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 150;
+    padding: 20px;
+  }
+  .modal.open { display: flex; }
+  .modal-card {
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: var(--shadow);
+  }
+  .modal-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+  .modal-actions {
+    display: flex; justify-content: flex-end; gap: 8px;
+    margin-top: 16px;
+  }
+
+  /* Helpers */
+  .row { display: flex; align-items: center; gap: 8px; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .muted { color: var(--text-3); }
+  .small { font-size: 11px; }
+  .kbd {
+    background: var(--bg-3);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+    color: var(--text-1);
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  }
+  .hidden { display: none !important; }
+  .empty-state {
+    text-align: center;
+    color: var(--text-3);
+    padding: 30px 10px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .empty-state .em-title { color: var(--text-2); margin-bottom: 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Topbar -->
+  <header class="topbar">
+    <div class="top-left">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div class="brand-text">
+          <span class="brand-title">My Agnes Studio</span>
+          <span class="brand-tagline">前沿模型 免费畅用 让AI属于每个人</span>
+        </div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btnSave" title="保存画布">
+        <span>💾</span><span class="small">保存</span>
+      </button>
+      <button class="icon-btn" id="btnOpen" title="打开画布">
+        <span>📂</span><span class="small">打开</span>
+      </button>
+      <button class="icon-btn" id="btnFit" title="适配视图">
+        <span>⊡</span><span class="small">适配</span>
+      </button>
+      <button class="icon-btn" id="btnClear" title="清空画布">
+        <span>✕</span><span class="small">清空</span>
+      </button>
+      <button class="icon-btn" id="btnSettings" title="设置">
+        <span>⚙</span>
+      </button>
+    </div>
+  </header>
+
+<!-- Left panel -->
+  <aside class="left-panel">
+    <div class="panel-section">
+      <div class="row" style="gap:6px">
+        <div class="mode-switch mode-switch-block" id="modeSwitch" style="flex:1">
+          <button data-mode="image" class="active">图像</button>
+          <button data-mode="video">视频</button>
+          <button data-mode="text">文本</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">生成参数</div>
+
+      <div class="form-row">
+        <label>提示词</label>
+        <textarea id="prompt" placeholder="描述你想生成的内容... 例如：日落时分薄雾峡谷上方的发光浮空城市，电影级写实风格"></textarea>
+      </div>
+
+      <!-- 图像参数 -->
+      <div id="imageParams">
+        <div class="form-row">
+          <label>生成模式</label>
+          <select id="imageMode">
+            <option value="t2i" selected>文生图（无参考图）</option>
+            <option value="i2i">图生图（1 张参考）</option>
+            <option value="multi">多图融合（≥2 张参考）</option>
+          </select>
+          <div class="muted small" id="imageModeHint" style="margin-top:4px"></div>
+        </div>
+        <div class="form-row">
+          <label>输出尺寸</label>
+          <select id="imageSize">
+            <option value="1024x768">1024 × 768 (4:3)</option>
+            <option value="1152x768">1152 × 768 (3:2)</option>
+            <option value="1024x1024">1024 × 1024 (1:1)</option>
+            <option value="768x1024">768 × 1024 (3:4)</option>
+            <option value="768x1152">768 × 1152 (2:3)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label id="imageRefLabel">图生图参考（可选）</label>
+          <div class="ref-box" id="imageRefBox">
+            <span class="empty">点击图片节点的 ↺、拖入、或用下方按钮</span>
+          </div>
+          <div class="row" style="gap:6px;margin-top:6px">
+            <button class="icon-btn" id="btnUploadLocal" title="上传本地图片（可多选）" style="padding:7px 10px">
+              <span>📁</span><span class="small">本地上传</span>
+            </button>
+            <input type="url" id="urlInput" placeholder="或粘贴图片 URL (https://...)" style="flex:1;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--text-0);outline:none;font-family:inherit;font-size:inherit" />
+            <button class="icon-btn primary" id="btnAddUrl" title="添加 URL 到参考图" style="padding:7px 12px">+</button>
+            <input type="file" id="imageFileInput" accept="image/*" multiple style="display:none" />
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:4px">
+          <div class="muted small" style="line-height:1.5">
+            <span style="color:var(--warn)">⚠</span> 图像 API 不支持 seed 参数（实测会返回 422），重生成只能复现 prompt，结果不可复现。
+          </div>
+        </div>
+      </div>
+
+      <!-- 视频参数 -->
+      <div id="videoParams" class="hidden">
+        <div class="form-row">
+          <label>目标时长（推荐）</label>
+<select id="videoDuration">
+            <option value="3">约 3 秒 · 81 帧 @ 24fps</option>
+            <option value="5" selected>约 5 秒 · 121 帧 @ 24fps</option>
+            <option value="10">约 10 秒 · 241 帧 @ 24fps</option>
+            <option value="17">约 17 秒 · 409 帧 @ 24fps（720p 上限）</option>
+            <option value="custom">自定义（手动调帧数 / 帧率）</option>
+          </select>
+          <div class="muted small" id="durationHint" style="margin-top:4px">≈ 5.04 秒</div>
+        </div>
+<div class="form-grid-2">
+          <div class="form-row">
+            <label>分辨率档位</label>
+            <select id="videoTier">
+              <option value="480p" selected>480p（最长 ≈ 40s）</option>
+              <option value="720p">720p（最长 ≈ 17s）</option>
+              <option value="1080p">1080p（最长 ≈ 7s）</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>宽高比</label>
+            <select id="videoRatio">
+              <option value="16:9">16:9 横版（YouTube / 产品演示）</option>
+              <option value="9:16">9:16 竖版（TikTok / Reels）</option>
+              <option value="1:1">1:1 方形（社交信息流）</option>
+              <option value="4:3">4:3 传统横版（通用演示）</option>
+              <option value="3:4">3:4 竖版演示（肖像 / 产品）</option>
+            </select>
+          </div>
+        </div>
+        <div class="muted small" id="resolutionHint" style="margin-top:-4px;margin-bottom:8px">
+          预估尺寸 <b id="resSize">1280×720</b> · 上限 <b id="resMax">409</b> 帧（≈<span id="resMaxSec">17.0</span>s）
+        </div>
+<div class="form-grid-2">
+          <div class="form-row">
+            <label>帧数 (8n+1，按分辨率上限)</label>
+            <input type="number" id="videoFrames" value="121" min="9" max="961" step="8" />
+          </div>
+          <div class="form-row">
+            <label>帧率</label>
+            <select id="videoFps">
+              <option value="24" selected>24</option>
+              <option value="30">30</option>
+              <option value="16">16</option>
+              <option value="12">12</option>
+            </select>
+          </div>
+        </div>
+        <div class="muted small" id="resolutionHint" style="margin-top:-4px;margin-bottom:8px">
+          预估 <b id="resTier">720p</b> · 上限 <b id="resMax">409</b> 帧
+        </div>
+        <div class="form-row">
+          <label>反向提示词（可选）</label>
+          <div class="row" style="gap:6px">
+            <input type="text" id="negativePrompt" placeholder="不希望出现的元素..." style="flex:1" />
+            <button class="icon-btn" id="btnFillNegativePrompt" title="填入常用模板" style="padding:4px 8px;font-size:11px">📋 模板</button>
+          </div>
+        </div>
+<div class="form-row">
+          <label>生成模式</label>
+          <select id="videoMode">
+            <option value="t2v" selected>文生视频（无参考图）</option>
+            <option value="i2v">图生视频（单图参考）</option>
+            <option value="keyframes">首尾帧动画（≥2 张关键帧）</option>
+          </select>
+          <div class="muted small" id="videoModeHint" style="margin-top:4px"></div>
+        </div>
+        <div class="form-row">
+          <label>运镜（选中后追加到 prompt）</label>
+          <div class="row" style="gap:6px">
+            <select id="videoCameraMotion" style="flex:1">
+              <option value="">无（不加运镜指令）</option>
+            </select>
+            <button class="icon-btn" id="btnCameraMotionPicker" title="可视化预览库" style="padding:7px 10px">📖 预览库</button>
+          </div>
+          <div class="row" id="cameraMotionChipBar" style="gap:6px;margin-top:6px;min-height:22px;display:none">
+            <span class="cm-chip" id="cameraMotionChip"></span>
+            <button class="icon-btn" id="btnRemoveCameraMotion" title="从 prompt 移除运镜" style="padding:3px 8px;font-size:11px">× 移除</button>
+          </div>
+        </div>
+<div class="form-row">
+          <label id="videoRefLabel">图生视频参考（可选）</label>
+          <div class="ref-box" id="videoRefBox">
+            <span class="empty">点击图片节点的"用作视频参考"</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>随机种子（留空 = 后端随机）</label>
+          <div class="row" style="gap:6px">
+            <input type="number" id="videoSeed" placeholder="随机" min="0" step="1" style="flex:1" />
+            <button class="icon-btn" id="btnVideoRandomSeed" title="填入随机数" style="padding:7px 10px">🎲</button>
+            <button class="icon-btn" id="btnVideoClearSeed" title="清空（恢复随机）" style="padding:7px 10px">×</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 文本参数（v1.19 新增） -->
+      <div id="textParams" class="hidden">
+        <div class="form-row">
+          <label>系统角色</label>
+          <select id="textRole">
+            <option value="assistant">通用助手</option>
+            <option value="storyboard">分镜描述专家</option>
+            <option value="script_polish">影视脚本优化专家</option>
+            <option value="image_reverse">图片反推</option>
+            <option value="translator">翻译专家</option>
+            <option value="custom">自定义</option>
+          </select>
+        </div>
+        <div class="form-row" id="textCustomRoleRow" style="display:none">
+          <textarea id="textCustomRole" placeholder="自定义系统角色提示词..." style="min-height:60px"></textarea>
+        </div>
+        <div class="form-row">
+          <label>温度：<span id="textTempVal">0.7</span>（0=精确，2=创意）</label>
+          <input type="range" id="textTemp" min="0" max="2" step="0.1" value="0.7" />
+        </div>
+        <div class="form-row">
+          <label>最大 Tokens</label>
+          <input type="number" id="textMaxTokens" min="64" max="8192" value="2048" step="64" />
+        </div>
+        <div class="form-row">
+          <label><input type="checkbox" id="textMultiTurn" checked /> 多轮对话（保留历史）</label>
+        </div>
+        <div class="form-row" id="textHistoryRow">
+          <label>对话历史（<span id="textHistoryCount">0</span> 条）</label>
+          <button class="icon-btn" id="btnClearTextHistory" style="padding:4px 10px;font-size:11px">清空历史</button>
+        </div>
+        <div class="form-row">
+          <label>附加图片理解（可选）</label>
+          <div class="row" style="gap:6px;margin-bottom:4px">
+            <button class="icon-btn" id="btnTextUploadImage" style="padding:4px 10px;font-size:11px">📁 上传</button>
+            <button class="icon-btn" id="btnTextClearImage" style="padding:4px 10px;font-size:11px">✕ 清除</button>
+          </div>
+          <input type="file" id="textImageInput" accept="image/*" hidden />
+          <div class="ref-box" id="textImageBox"><span class="empty">无附加图片（纯文本对话）</span></div>
+        </div>
+      </div>
+
+      <button class="gen-btn" id="btnGenerate">
+        <span>✦</span>
+        <span id="btnGenText">生成图像</span>
+      </button>
+    </div>
+
+<div class="panel-section">
+      <div class="section-title">
+        提示词建议
+        <button class="icon-btn small" id="btnPromptHelp" style="padding:2px 8px;font-size:10px">?</button>
+      </div>
+
+      <div class="muted small tpl-block" style="margin-top:10px;line-height:1.7" data-modes="t2i">
+        <div><b>🖼️ 文生图范例</b> · image-2.1-flash</div>
+        <div>公式：<span class="kbd">[主体] + [场景 / 环境] + [风格] + [光照] + [构图] + [质量要求]</span></div>
+        <div>范例：<span class="kbd">日出时分薄雾峡谷上方的发光浮空城市，电影级写实风格，广角构图，丰富的建筑细节，柔和的金色光线，高视觉密度</span></div>
+      </div>
+
+      <div class="muted small tpl-block" style="margin-top:10px;line-height:1.7" data-modes="i2i">
+        <div><b>🔄 图生图范例</b> · image-2.1-flash</div>
+        <div>公式：<span class="kbd">[改变要求] + [新风格 / 场景] + [需要添加或移除的元素] + [需要保留的元素]</span></div>
+        <div>范例：<span class="kbd">将白天街道场景改为电影级赛博朋克夜景，添加霓虹招牌和湿滑路面倒影，同时保留原始街道布局、相机角度和主要建筑形状</span></div>
+      </div>
+
+      <div class="muted small tpl-block" style="margin-top:10px;line-height:1.7" data-modes="t2i,i2i,multi">
+        <div><b>🏙️ 高信息密度图像范例</b> · image-2.1-flash</div>
+        <div>公式：<span class="kbd">[主体] + [次要细节] + [背景/环境] + [风格] + [光照] + [构图约束]</span></div>
+        <div>范例：<span class="kbd">建在悬崖上的大型奇幻港口城市，数百艘小船，层叠的石桥，发光的窗户，远山，多云的日落天空，电影级奇幻写实风格，广角构图，丰富的建筑细节，高视觉密度</span></div>
+      </div>
+
+      <div class="muted small tpl-block" style="margin-top:10px;line-height:1.7" data-modes="t2v">
+        <div><b>🎬 文生视频范例</b> · video-v2.0</div>
+        <div>公式：<span class="kbd">[主体] + [动作] + [场景] + [镜头运动] + [光线] + [风格]</span></div>
+        <div>范例：<span class="kbd">一个年轻的宇航员走过红色沙漠星球，风中扬起尘土，电影级慢速跟拍镜头，戏剧性日落光照，逼真科幻风格</span></div>
+      </div>
+
+      <div class="muted small tpl-block" style="margin-top:10px;line-height:1.7" data-modes="i2v">
+        <div><b>🖼️→🎬 图生视频范例</b> · video-v2.0</div>
+        <div>公式：<span class="kbd">[动起来的内容] + [保持稳定的主体]</span></div>
+        <div>范例：<span class="kbd">为角色添加轻微呼吸动作，头发随微风轻摆，背景灯光柔和闪烁，同时保持面部和服装一致</span></div>
+      </div>
+
+      <div class="muted small tpl-block" style="margin-top:10px;line-height:1.7" data-modes="keyframes">
+        <div><b>🎞️ 多图视频范例</b> · video-v2.0</div>
+        <div>公式：<span class="kbd">[起始场景 → 目标场景] + [过渡方式] + [一致性约束]</span></div>
+        <div>范例：<span class="kbd">用第一张图作为起始场景，第二张图作为目标场景。创建具有一致光照、自然动作和电影节奏的平滑转换</span></div>
+      </div>
+
+      <div class="muted small tpl-block" style="margin-top:10px;line-height:1.7" data-modes="keyframes">
+        <div><b>🎞️ 关键帧动画范例</b> · video-v2.0</div>
+        <div>公式：<span class="kbd">[关键帧 1 → 关键帧 2] + [保持角色/场景一致] + [自然过渡节奏]</span></div>
+        <div>范例：<span class="kbd">在第一个关键帧和第二个关键帧之间创建平滑过渡，保持角色身份、相机角度一致、场景间动作自然</span></div>
+      </div>
+    </div>
+
+    <!-- 文本对话记录（v1.19 新增，文本模式下显示） -->
+    <div class="panel-section" id="textConversationSection" style="display:none">
+      <div class="section-title">💬 对话记录</div>
+      <div id="textConversation" class="text-conversation">
+        <div class="muted small" style="text-align:center;padding:20px">还没有对话，发起第一条提问吧</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Canvas -->
+  <main class="canvas-area">
+    <div class="canvas-viewport" id="viewport">
+      <div class="canvas-world" id="world">
+        <div style="position:absolute;left:-1px;top:-1px;width:1px;height:1px;"></div>
+      </div>
+    </div>
+    <div class="canvas-hud">
+      <button class="hud-btn" id="btnZoomOut">－</button>
+      <div class="zoom-display" id="zoomDisplay">100%</div>
+      <button class="hud-btn" id="btnZoomIn">＋</button>
+    </div>
+<div id="emptyHint" class="empty-state" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
+      <div style="font-size:32px;opacity:0.4;margin-bottom:12px">⊞</div>
+      <div class="em-title">画布是空的</div>
+      <div>左侧输入提示词点击「生成」开始</div>
+      <div class="muted small" style="margin-top:8px">
+        或直接 <span class="kbd">Ctrl+V</span> 粘贴截图 / 图片作为参考
+      </div>
+      <div class="muted small" style="margin-top:10px">
+        <span class="kbd">滚轮</span> 缩放 · <span class="kbd">空格+拖拽</span> 平移 · <span class="kbd">双击</span> 预览
+      </div>
+    </div>
+  </main>
+
+  <!-- Right panel -->
+  <aside class="right-panel">
+    <div class="section-title">
+      任务队列 <span class="count" id="taskCount">0</span>
+    </div>
+    <div id="taskList">
+      <div class="empty-state">
+        <div class="em-title">暂无任务</div>
+        <div>生成记录会显示在这里</div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- Preview overlay -->
+<div class="preview-overlay" id="previewOverlay">
+  <button class="preview-download" id="previewDownload">下载</button>
+  <button class="preview-close" id="previewClose">✕</button>
+  <div id="previewContent"></div>
+</div>
+
+<!-- Save / Open modal -->
+<div class="modal" id="saveModal">
+  <div class="modal-card">
+    <div class="modal-title">保存画布</div>
+    <div class="muted small" style="margin-bottom:14px">
+      当前画布共 <b id="saveNodeCount">0</b> 个节点。
+      <br/>「保存到浏览器」会保留到 localStorage，下次打开自动恢复；「下载文件」拿到一份 JSON，可发给别人或备份。
+    </div>
+    <div class="col" style="gap:10px">
+      <button class="gen-btn" id="btnSaveLocal">💾 保存到浏览器本地</button>
+      <button class="gen-btn" style="background:var(--bg-3);color:var(--text-0)" id="btnSaveFile">⬇ 下载 JSON 文件</button>
+      <button class="icon-btn" id="btnSaveClose">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="openModal">
+  <div class="modal-card">
+    <div class="modal-title">打开画布</div>
+    <div class="muted small" style="margin-bottom:14px">
+      从浏览器本地恢复，或从本地 JSON 文件加载（将替换当前画布）。
+    </div>
+    <div class="col" style="gap:10px">
+      <button class="gen-btn" id="btnOpenLocal">📂 从浏览器本地恢复</button>
+      <button class="gen-btn" style="background:var(--bg-3);color:var(--text-0)" id="btnOpenFile">📁 从本地 JSON 文件加载</button>
+      <button class="icon-btn" id="btnOpenClose">取消</button>
+    </div>
+    <input type="file" id="fileInput" accept="application/json,.json" style="display:none" />
+  </div>
+</div>
+
+<!-- 运镜库预览 modal -->
+<div class="modal" id="cameraMotionModal">
+  <div class="modal-card camera-motion-modal-card">
+    <div class="modal-title">🎥 运镜库 <span class="muted small" id="cmCount"></span></div>
+    <div class="cm-tabs" id="cmTabs"></div>
+    <div class="cm-grid" id="cmGrid"></div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="icon-btn" id="cmClearBtn">清空选择</button>
+      <button class="icon-btn primary" id="cmCloseBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal" id="settingsModal">
+  <div class="modal-card">
+    <div class="modal-title">设置</div>
+    <div class="form-row">
+      <label>API Base URL</label>
+      <input type="text" id="cfgBaseUrl" />
+    </div>
+    <div class="form-row">
+      <label>API Key</label>
+      <input type="password" id="cfgApiKey" placeholder="sk-..." />
+    </div>
+    <div class="form-row">
+      <label>视频轮询间隔（毫秒）</label>
+      <input type="number" id="cfgPollMs" min="3000" max="60000" step="1000" />
+    </div>
+    <div class="form-row">
+      <label>恢复已有视频任务（粘贴 video_id）</label>
+      <div class="row" style="gap:6px">
+        <input type="text" id="cfgRecoverId" placeholder="video_..." style="flex:1" />
+        <button class="icon-btn primary" id="btnRecover" style="padding:7px 12px">查询</button>
+      </div>
+    </div>
+    <div class="muted small" style="line-height:1.5;margin-top:8px">
+      API Key 仅保存在浏览器本地（localStorage）。如遇 CORS 错误，建议部署一个轻量代理或自行打开浏览器扩展放行跨域。
+    </div>
+    <div class="modal-actions">
+      <button class="icon-btn" id="settingsClose">关闭</button>
+      <button class="icon-btn primary" id="settingsSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ============================
+ * 配置 & 工具
+ * ============================ */
+const DEFAULTS = {
+  baseUrl: 'https://apihub.agnes-ai.com/v1',
+  // ⚠️ 临时默认 Key（按用户要求先用这个令牌）；用户应尽快从 Agnes 控制台重置 + 在 v1.12 移除
+  apiKey: 'sk-N7ai7nAl53EdDGe6r1EjuMz4Zmt4lcnJ8Ue7o8NHZM4iefML',
+  pollMs: 10000,
+};
+
+const CFG = {
+  baseUrl: localStorage.getItem('agnes.baseUrl') || DEFAULTS.baseUrl,
+  apiKey: localStorage.getItem('agnes.apiKey') || DEFAULTS.apiKey,
+  pollMs: parseInt(localStorage.getItem('agnes.pollMs')) || DEFAULTS.pollMs,
+};
+function saveCfg() {
+  localStorage.setItem('agnes.baseUrl', CFG.baseUrl);
+  localStorage.setItem('agnes.apiKey', CFG.apiKey);
+  localStorage.setItem('agnes.pollMs', String(CFG.pollMs));
+}
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+const uid = () => 'n_' + Math.random().toString(36).slice(2, 10);
+
+function toast(msg, type = 'info', ms = 3000) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  $('#toastWrap').appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity .3s';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 300);
+  }, ms);
+}
+
+/* ============================
+ * API 调用
+ * ============================ */
+async function callApi(path, opts = {}) {
+  const url = path.startsWith('http') ? path : CFG.baseUrl + path;
+  const resp = await fetch(url, {
+    ...opts,
+    headers: {
+      'Authorization': 'Bearer ' + CFG.apiKey,
+      'Content-Type': 'application/json',
+      ...(opts.headers || {}),
+    },
+  });
+  const text = await resp.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; }
+  catch { data = { raw: text }; }
+  if (!resp.ok) {
+    const err = new Error(data?.error?.message || data?.message || `HTTP ${resp.status}`);
+    err.status = resp.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+// 瞬时错误自动重试（upstream 5xx、网络抖动）
+function isRetryableError(err) {
+  const msg = (err?.message || '').toLowerCase();
+  if (err?.status >= 500 && err?.status < 600) return true;
+  if (msg.includes('upstream error')) return true;
+  if (msg.includes('do request failed')) return true;
+  if (msg.includes('failed to fetch') || msg.includes('networkerror')) return true;
+  if (msg.includes('timeout') || msg.includes('aborted')) return true;
+  return false;
+}
+async function callApiWithRetry(path, opts = {}, retryOpts = {}) {
+  const { retries = 3, delayMs = 2500, label = '' } = retryOpts;
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await callApi(path, opts);
+    } catch (err) {
+      lastErr = err;
+      if (attempt === retries || !isRetryableError(err)) throw err;
+      const wait = delayMs * (attempt + 1);
+      console.warn(`[Agnes][retry] ${path} attempt ${attempt + 1} failed, retrying in ${wait}ms:`, err.message);
+      toast(`${label || '请求'}瞬时错误，${(wait/1000).toFixed(1)}s 后重试 (${attempt + 1}/${retries})`, 'warn', wait);
+      await new Promise(r => setTimeout(r, wait));
+    }
+  }
+  throw lastErr;
+}
+
+async function generateImage({ prompt, size, image }) {
+  const body = {
+    model: 'agnes-image-2.1-flash',
+    prompt,
+    size,
+    extra_body: { response_format: 'url' },
+  };
+  if (image) {
+    body.extra_body.image = Array.isArray(image) ? image : [image];
+  }
+  return callApi('/images/generations', { method: 'POST', body: JSON.stringify(body) });
+}
+
+// 图像反推：让 agnes-2.0-flash 看图，输出适合图像生成的英文 prompt
+async function reverseImageToPrompt(imageUrl) {
+  const resp = await callApiWithRetry('/chat/completions', {
+    method: 'POST',
+    body: JSON.stringify({
+      model: 'agnes-2.0-flash',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a prompt engineer for an AI image generation model. Given an input image, write a concise English prompt (50-100 words) that would reproduce the image. Focus on: subject, scene/environment, visual style (e.g. photorealistic, cinematic, illustration, oil painting), lighting (e.g. soft natural light, dramatic rim light, golden hour), composition, color palette. Output ONLY the prompt text, no preamble, no labels, no quotes, no explanation.',
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Write a generation prompt that would reproduce this image.' },
+            { type: 'image_url', image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 300,
+    }),
+  }, { retries: 2, delayMs: 2000, label: '反推' });
+  return resp?.choices?.[0]?.message?.content?.trim() || '';
+}
+
+// 英译中：用 agnes-2.0-flash 把英文 prompt 翻译成自然流畅的中文
+async function translateToChinese(text) {
+  if (!text) return '';
+  const resp = await callApiWithRetry('/chat/completions', {
+    method: 'POST',
+    body: JSON.stringify({
+      model: 'agnes-2.0-flash',
+      messages: [
+        { role: 'system', content: 'You are a professional translator. Translate the given English image-generation prompt into natural, fluent Chinese (简体中文). Keep technical terms and proper nouns accurate. Output ONLY the Chinese translation, no preamble, no quotes, no explanation, no English.' },
+        { role: 'user', content: text },
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+    }),
+  }, { retries: 2, delayMs: 1500, label: '翻译' });
+  return resp?.choices?.[0]?.message?.content?.trim() || '';
+}
+
+async function createVideoTask(params) {
+  return callApiWithRetry('/videos', { method: 'POST', body: JSON.stringify(params) },
+    { retries: 3, delayMs: 2500, label: '视频任务' });
+}
+
+// 从 Agnes 网关伪 ID 中提取真正的 video_id
+// 网关返回的 video_id 字段形如：video_bGl0ZWxsbTp...（base64 编码 "litellm:...;video_id:video_xxx"）
+function extractRealVideoId(idOrEncoded) {
+  if (!idOrEncoded || !idOrEncoded.startsWith('video_')) return idOrEncoded;
+  const b64 = idOrEncoded.slice(6);
+  if (b64.length < 50) return idOrEncoded;   // 短的不是编码格式
+  try {
+    const std = b64.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = atob(std);
+    const m = decoded.match(/video_id:(video_[a-f0-9]+)/);
+    return m ? m[1] : idOrEncoded;
+  } catch {
+    return idOrEncoded;
+  }
+}
+
+async function fetchVideoStatus(videoId) {
+  // 用 Agnes 官方推荐的 /agnesapi?video_id= 端点（不在 /v1 路径下，单独拼接 host）
+  const realId = extractRealVideoId(videoId);
+  const url = new URL('/agnesapi', CFG.baseUrl);
+  url.searchParams.set('video_id', realId);
+  const resp = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + CFG.apiKey },
+  });
+  const text = await resp.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; }
+  catch { data = { raw: text }; }
+  if (!resp.ok) {
+    const err = new Error(data?.error?.message || `HTTP ${resp.status}`);
+    err.status = resp.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+function extractVideoUrl(data) {
+  if (!data) return null;
+  // 兼容多个可能的字段名
+  return data.url || data.video_url || data.output_url
+      || data.remixed_from_video_id || data.result_url || null;
+}
+
+// 防御性清洗 DataURL：去空白 + 补 padding，确保 base64 长度合法
+// 解决后端偶发 "Invalid base64-encoded string: ... cannot be 1 more than a multiple of 4"
+// 原因可能是 FileReader / 中间环节 / 浏览器扩展把末尾 padding 或个别字符吞了
+function cleanBase64DataUrl(s) {
+  if (typeof s !== 'string' || !s.startsWith('data:')) return s;
+  const comma = s.indexOf(',');
+  if (comma < 0) return s;
+  const prefix = s.slice(0, comma + 1);
+  let b64 = s.slice(comma + 1);
+  // 去空白 / 换行
+  b64 = b64.replace(/\s+/g, '');
+  // 补 padding（base64 长度必须 mod 4 == 0）
+  const pad = (4 - (b64.length % 4)) % 4;
+  if (pad > 0 && pad < 4) b64 += '='.repeat(pad);
+  return prefix + b64;
+}
+
+/* ============================
+ * 状态
+ * ============================ */
+const state = {
+  mode: 'image',
+  cmSelectedId: '',   // 当前选中的运镜 id（v1.13 新增，跟踪 prompt 末尾拼接的运镜）
+  nodes: new Map(),   // id -> node
+  tasks: new Map(),   // taskId -> task
+  // 画布视图
+  view: { x: 0, y: 0, scale: 1 },
+  // 当前选中的图片节点 id（作为视频参考）
+  videoRefIds: [],
+  // 当前选中的图片节点 id 数组（作为图像参考）
+  imageRefIds: [],
+  // 拖拽相关
+  pan: null,
+  nodeDrag: null,
+  // 文本生成（v1.19 新增）
+  textHistory: [],     // 多轮对话历史：[{role, content}]
+  textImageUrl: '',    // 附加图片理解（data: 或 http URL）
+};
+
+/* ============================
+ * 无限画布
+ * ============================ */
+const viewport = $('#viewport');
+const world = $('#world');
+const emptyHint = $('#emptyHint');
+
+function applyView() {
+  world.style.transform = `translate(${state.view.x}px, ${state.view.y}px) scale(${state.view.scale})`;
+  $('#zoomDisplay').textContent = Math.round(state.view.scale * 100) + '%';
+}
+applyView();
+
+viewport.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = viewport.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  const newScale = Math.max(0.1, Math.min(8, state.view.scale * factor));
+  // 以鼠标位置为中心缩放
+  const ratio = newScale / state.view.scale;
+  state.view.x = cx - (cx - state.view.x) * ratio;
+  state.view.y = cy - (cy - state.view.y) * ratio;
+  state.view.scale = newScale;
+  applyView();
+}, { passive: false });
+
+// 平移：空格 + 拖拽，或中键拖拽
+let spaceDown = false;
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+    spaceDown = true;
+    viewport.style.cursor = 'grab';
+    e.preventDefault();
+  }
+});
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') {
+    spaceDown = false;
+    viewport.style.cursor = '';
+  }
+});
+
+viewport.addEventListener('mousedown', (e) => {
+  // 中键 或 空格+左键 = 平移（恢复到原来的设定）
+  if (e.button === 1 || (e.button === 0 && spaceDown)) {
+    state.pan = { sx: e.clientX, sy: e.clientY, ox: state.view.x, oy: state.view.y };
+    viewport.classList.add('panning');
+    e.preventDefault();
+    return;
+  }
+  // 点击空白处取消选中
+  if (e.target === viewport || e.target === world) {
+    deselectAllNodes();
+    hideEmptyHint();
+  }
+});
+window.addEventListener('mousemove', (e) => {
+  if (state.pan) {
+    state.view.x = state.pan.ox + (e.clientX - state.pan.sx);
+    state.view.y = state.pan.oy + (e.clientY - state.pan.sy);
+    applyView();
+  }
+  if (state.nodeDrag) {
+    const dx = (e.clientX - state.nodeDrag.sx) / state.view.scale;
+    const dy = (e.clientY - state.nodeDrag.sy) / state.view.scale;
+    const node = state.nodes.get(state.nodeDrag.id);
+    if (node) {
+node.x = state.nodeDrag.ox + dx;
+      node.y = state.nodeDrag.oy + dy;
+      const el = document.getElementById(node.id);
+      if (el) { el.style.left = node.x + 'px'; el.style.top = node.y + 'px'; }
+      // 同步反推 popover 位置
+      const pop = promptPopovers.get(node.id);
+      if (pop) positionPromptPopover(node, pop);
+    }
+  }
+});
+window.addEventListener('mouseup', () => {
+  if (state.pan) { state.pan = null; viewport.classList.remove('panning'); }
+  if (state.nodeDrag) {
+    const node = state.nodes.get(state.nodeDrag.id);
+    if (node) {
+      const el = document.getElementById(node.id);
+      if (el) el.classList.remove('dragging');
+    }
+    state.nodeDrag = null;
+  }
+});
+
+// 键盘删除
+window.addEventListener('keydown', (e) => {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+    const selected = [...state.nodes.values()].find(n => n.selected);
+    if (selected) {
+      e.preventDefault();
+      removeNode(selected.id);
+    }
+  }
+});
+
+function deselectAllNodes() {
+  for (const n of state.nodes.values()) {
+    n.selected = false;
+    const el = document.getElementById(n.id);
+    if (el) el.classList.remove('selected');
+  }
+}
+function selectNode(id) {
+  deselectAllNodes();
+  const node = state.nodes.get(id);
+  if (!node) return;
+  node.selected = true;
+  const el = document.getElementById(id);
+  if (el) el.classList.add('selected');
+}
+function hideEmptyHint() {
+  emptyHint.style.display = state.nodes.size ? 'none' : '';
+}
+
+// HUD
+$('#btnZoomIn').onclick = () => zoomCenter(1.2);
+$('#btnZoomOut').onclick = () => zoomCenter(1 / 1.2);
+function zoomCenter(factor) {
+  const rect = viewport.getBoundingClientRect();
+  const cx = rect.width / 2, cy = rect.height / 2;
+  const newScale = Math.max(0.1, Math.min(8, state.view.scale * factor));
+  const ratio = newScale / state.view.scale;
+  state.view.x = cx - (cx - state.view.x) * ratio;
+  state.view.y = cy - (cy - state.view.y) * ratio;
+  state.view.scale = newScale;
+  applyView();
+}
+$('#btnFit').onclick = fitView;
+function fitView() {
+  if (state.nodes.size === 0) {
+    state.view = { x: 0, y: 0, scale: 1 };
+    applyView();
+    return;
+  }
+  // 计算所有节点边界
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of state.nodes.values()) {
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + n.w);
+    maxY = Math.max(maxY, n.y + n.h);
+  }
+  const pad = 60;
+  const cw = maxX - minX + pad * 2;
+  const ch = maxY - minY + pad * 2;
+  const rect = viewport.getBoundingClientRect();
+  const scale = Math.min(rect.width / cw, rect.height / ch, 1);
+  state.view.scale = scale;
+state.view.x = -minX * scale + (rect.width - cw * scale) / 2 + pad * scale;
+  state.view.y = -minY * scale + (rect.height - ch * scale) / 2 + pad * scale;
+  applyView();
+  // 画布视图变化后，popover 位置需要重新计算
+  setTimeout(updateAllPopoverPositions, 0);
+}
+$('#btnClear').onclick = () => {
+  if (!state.nodes.size) return;
+  if (!confirm('确定清空画布？')) return;
+  for (const id of state.nodes.keys()) removeNode(id, true);
+  state.view = { x: 0, y: 0, scale: 1 };
+  applyView();
+};
+
+/* ============================
+ * 节点
+ * ============================ */
+function createNode({ type, x, y, w, h, prompt, src, status, progress, meta }) {
+  const id = uid();
+  const node = {
+    id, type, x, y, w, h, prompt, src, status, progress, meta, selected: false,
+    createdAt: Date.now(),
+  };
+  state.nodes.set(id, node);
+  renderNode(node);
+  hideEmptyHint();
+  fitViewIfFirst();
+  return node;
+}
+
+function fitViewIfFirst() {
+  if (state.nodes.size === 1) {
+    setTimeout(() => fitView(), 50);
+  }
+}
+
+function renderNode(node) {
+  let el = document.getElementById(node.id);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = node.id;
+    el.className = 'node';
+    el.style.width = node.w + 'px';
+    el.style.height = node.h + 'px';
+    el.style.left = node.x + 'px';
+    el.style.top = node.y + 'px';
+    el.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || spaceDown) return;
+      if (e.target.closest('.node-action')) return; // 不拦截按钮
+      // 视频节点的本体（含 video 原生控件）不参与拖拽，避免和原生播放控件冲突
+      if (node.type === 'video' && e.target.closest('video')) return;
+      selectNode(node.id);
+      state.nodeDrag = {
+        id: node.id,
+        sx: e.clientX, sy: e.clientY,
+        ox: node.x, oy: node.y,
+      };
+      el.classList.add('dragging');
+      e.stopPropagation();
+    });
+    el.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.node-action')) return;
+      previewNode(node.id);
+    });
+    world.appendChild(el);
+  }
+  el.style.left = node.x + 'px';
+  el.style.top = node.y + 'px';
+  el.style.width = node.w + 'px';
+  el.style.height = node.h + 'px';
+
+  const isVideo = node.type === 'video';
+const typeLabel = isVideo ? 'VIDEO' : 'IMAGE';
+  // placeholder 文案按状态区分
+  const placeholderText = ({
+    failed: '❌ 生成失败',
+    no_url: '⚠️ 完成但未返回 URL',
+    queued: '排队中...',
+    in_progress: '生成中...',
+    running: '生成中...',
+    reversing: '⟲ 反推中...',
+  })[node.status] || (isVideo ? '视频生成中...' : '图像生成中...');
+  const placeholder = `
+    <div class="node-placeholder ${node.status === 'failed' ? 'failed' : ''}">
+      <div style="font-size:24px;margin-bottom:8px">${node.status === 'failed' ? '💥' : (isVideo ? '🎬' : '🖼️')}</div>
+      <div>${placeholderText}</div>
+      ${node.progress != null ? `
+        <div class="node-progress"><div class="node-progress-bar" style="width:${node.progress}%"></div></div>
+        <div class="muted small" style="margin-top:6px">${node.progress}% · ${node.status || 'queued'}</div>
+      ` : ''}
+      ${node.meta?.error ? `<div class="small" style="color:var(--err);margin-top:8px;max-width:90%;word-break:break-all">${escapeHtml(node.meta.error)}</div>` : ''}
+    </div>`;
+  const body = node.src
+    ? (isVideo
+        ? `<video src="${node.src}" controls preload="metadata" draggable="false"></video>`
+        : `<img src="${node.src}" alt="" />`)
+    : placeholder;
+
+  el.innerHTML = `
+    <div class="node-header">
+      <span class="node-type-badge ${isVideo ? 'video' : ''} ${node.status === 'uploaded' ? 'uploaded' : node.status === 'external' ? 'external' : ''}">${node.status === 'uploaded' ? '📁 上传' : node.status === 'external' ? '🔗 URL' : typeLabel}</span>
+      <span class="muted small">${shortTime(node.createdAt)}</span>
+<div class="node-actions">
+        ${!isVideo ? `<button class="node-action" title="加入图像参考" data-act="toImageRef">▭</button>` : ''}
+        ${!isVideo ? `<button class="node-action" title="加入视频参考（拖动图片也可）" data-act="toVideoRef">▶</button>` : ''}
+        ${!isVideo ? `<button class="node-action" title="反推：用 agnes-2.0-flash 看图生成 prompt" data-act="reversePrompt">⟲</button>` : ''}
+        ${node.status === 'failed' ? `<button class="node-action" title="用相同参数重新提交" data-act="retry" style="color:var(--brand)">↻</button>` : ''}
+        <button class="node-action" title="预览" data-act="preview">⤢</button>
+        <button class="node-action" title="下载" data-act="download">⬇</button>
+        <button class="node-action danger" title="删除" data-act="delete">✕</button>
+      </div>
+    </div>
+    <div class="node-body" style="height:${node.h - 28 - 46}px">${body}</div>
+    <div class="node-footer">
+      <div class="prompt" title="${escapeHtml(node.prompt || '')}">${escapeHtml(node.prompt || '(无提示词)')}</div>
+<div class="meta-row">
+        ${renderNodeMeta(node)}
+        <div class="meta-actions">
+          ${node.meta?.zhPrompt ? `<button class="meta-action" data-act="fillZh" title="把中文反推结果填到 prompt 输入框">🇨🇳</button>` : ''}
+          ${node.meta?.enPrompt ? `<button class="meta-action" data-act="fillEn" title="把英文反推结果填到 prompt 输入框">🇺🇸</button>` : ''}
+          ${node.type === 'video' ? `<button class="meta-action" data-act="copySeed" title="复制 seed 到视频输入框">📋 seed</button>` : ''}
+          <button class="meta-action" data-act="reGen" title="${node.type === 'video' ? '用此 prompt + seed 重新生成' : '用此 prompt 重新生成（图像 API 不支持 seed，结果不可复现）'}">↻ 重生成</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // 反推结果 popover（节点右侧）
+  ensurePromptPopover(node);
+
+  // 绑定节点内部按钮事件
+  el.querySelectorAll('.node-action, .meta-action').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const act = btn.dataset.act;
+      handleNodeAction(node.id, act);
+    };
+  });
+}
+
+function handleNodeAction(id, act) {
+  const node = state.nodes.get(id);
+  if (!node) return;
+switch (act) {
+    case 'toVideoRef':
+      // 切到视频模式，再加入视频参考
+      if (state.mode !== 'video') switchMode('video');
+      if (!state.videoRefIds.includes(id)) state.videoRefIds.push(id);
+      toast(`已加入视频参考（共 ${state.videoRefIds.length} 张）`, 'ok');
+      renderVideoRefBox();
+      updateVideoMode();
+      break;
+    case 'toImageRef':
+      // 切到图像模式，再加入图像参考
+      if (state.mode !== 'image') switchMode('image');
+      if (!state.imageRefIds.includes(id)) state.imageRefIds.push(id);
+      toast(`已加入图像参考（共 ${state.imageRefIds.length} 张）`, 'ok');
+      renderImageRefBox();
+      updateImageMode();
+      break;
+    case 'reversePrompt':
+      reversePromptFromNode(id);
+      break;
+    case 'preview':
+      previewNode(id);
+      break;
+    case 'download':
+      downloadNode(id);
+      break;
+    case 'copySeed':
+      copyNodeSeed(id);
+      break;
+case 'reGen':
+      reGenFromNode(id);
+      break;
+    case 'fillEn':
+      fillPromptFromNodeLang(id, 'en');
+      break;
+    case 'fillZh':
+      fillPromptFromNodeLang(id, 'zh');
+      break;
+    case 'retry':
+      retryFromNode(id);
+      break;
+    case 'delete':
+      removeNode(id);
+      break;
+  }
+}
+
+// 节点 meta 渲染：seed + 时长 + 生成耗时
+function renderNodeMeta(node) {
+  const meta = node.meta || {};
+  const parts = [];
+  // seed 仅视频节点显示（图像 API 不支持）
+  if (node.type === 'video') {
+    if (meta.seed != null) {
+      parts.push(`<span class="meta" title="随机种子">🎲 <strong>${meta.seed}</strong></span>`);
+    }
+  }
+  // 时长
+  if (meta.duration) {
+    parts.push(`<span class="meta" title="视频时长">⏱ <strong>${meta.duration}</strong></span>`);
+  }
+  // 推理耗时（视频专属）
+  if (meta.inferSeconds) {
+    parts.push(`<span class="meta" title="服务端推理耗时">🔥 <strong>${meta.inferSeconds}s</strong></span>`);
+  } else if (meta.elapsedMs) {
+    parts.push(`<span class="meta" title="客户端测量耗时">⚡ <strong>${(meta.elapsedMs/1000).toFixed(1)}s</strong></span>`);
+  }
+// 尺寸
+  if (meta.size) {
+    parts.push(`<span class="meta" title="实际输出尺寸">📐 <strong>${meta.size}</strong></span>`);
+  }
+  // 运镜（视频节点，从 sourceParams 读）
+  const cm = meta.sourceParams?.cameraMotion || meta.cameraMotion;
+  if (cm && node.type === 'video') {
+    const label = CAMERA_MOTION_LABELS?.[cm] || cm;
+    parts.push(`<span class="meta" title="运镜（已拼到 prompt）">🎥 <strong>${label}</strong></span>`);
+  }
+  return parts.join('');
+}
+
+// 复制节点 seed 到左侧对应输入框
+function copyNodeSeed(id) {
+  const node = state.nodes.get(id);
+  if (!node) return;
+  if (node.type !== 'video') {
+    toast('图像 API 不支持 seed，无法复制', 'warn');
+    return;
+  }
+  const seed = node.meta?.seed;
+  if (seed == null) {
+    toast('该视频节点无 seed（未填 seed 且后端未回传）', 'warn');
+    return;
+  }
+  $('#videoSeed').value = String(seed);
+  switchMode('video');
+  toast(`已复制 seed=${seed} 到视频输入框`, 'ok', 2000);
+}
+
+// 用此节点的 prompt（视频还会带 seed）重新生成
+// 顶部"反推"按钮已删除（v1.19）；节点上的反推按钮（每个 image 节点的 ↺）仍可用 reversePromptFromNode
+
+/* ============================
+ * Prompt 安全检查（v1.21 新增）
+ * 客户端预检：扫描可能触发 Agnes 服务端内容审核拒绝的关键词
+ * 注意：这是粗筛，结果仅供参考，不能 100% 准确；服务端真实拒绝原因需看 Console
+ * ============================ */
+const PROMPT_RISK_KEYWORDS = [
+  { pattern: /\b(360|three[\s-]+hundred)\s*(°|deg(ree)?s?)\b/i, hint: '360 度环绕' },
+  { pattern: /\b(in\s+(her|his|their)\s+\d+s?|aged?\s+\d+|\d+\s*-?\s*year[\s-]*old)\b/i, hint: '具体年龄段' },
+  { pattern: /\b(detailed\s+facial\s+features?|realistic\s+skin\s+texture|hyper[\s-]*?realistic)\b/i, hint: '写实脸部/超写实细节' },
+  { pattern: /\b(nude|naked|nudity|nsfw|explicit|erotic|topless)\b/i, hint: '成人内容' },
+  { pattern: /\b(gore|violent|blood\s+and\s+guts|beheading|dismember)\b/i, hint: '血腥暴力' },
+  { pattern: /\b(child|kid|minor|underage)\b/i, hint: '儿童（高风险）' },
+];
+
+function preCheckPrompt(prompt) {
+  if (!prompt) return [];
+  const hits = [];
+  for (const { pattern, hint } of PROMPT_RISK_KEYWORDS) {
+    if (pattern.test(prompt)) hits.push(hint);
+  }
+  return hits;
+}
+
+function showPromptRiskWarning(prompt) {
+  const hits = preCheckPrompt(prompt);
+  if (hits.length === 0) return;
+  toast('⚠️ Prompt 可能触发服务端拒绝：' + hits.join(' / '), 'warn', 6000);
+}
+
+/* ============================
+ * 反向提示词模板（v1.22 新增）
+ * ============================ */
+const NEGATIVE_PROMPT_PRESETS = {
+  general: 'blur, distortion, low quality, ugly, deformed, watermark, text, signature, jpeg artifacts',
+  face: 'blur, distorted face, asymmetric eyes, extra fingers, deformed hands, low quality',
+  cinematic: 'amateur, shaky camera, overexposed, underexposed, blurry, low quality, jpeg artifacts',
+};
+
+$('#btnFillNegativePrompt').onclick = () => {
+  const current = $('#negativePrompt').value.trim();
+  if (current && !confirm('当前已有反向提示词，确定要覆盖为模板吗？')) return;
+  $('#negativePrompt').value = NEGATIVE_PROMPT_PRESETS.general;
+  toast('已填入通用反向提示词模板', 'ok', 1500);
+};
+
+/* ============================
+ * 文本生成（v1.19 新增，使用 agnes-2.0-flash）
+ * 能力：聊天补全、多轮对话、图像理解、流式输出
+ * ============================ */
+const TEXT_ROLES = {
+  assistant: '你是一个通用助手，回答用户问题，提供有用的信息。回答简洁直接，不要过多客套。',
+  storyboard: '你是一位专业的分镜描述师，擅长把创意想法拆解成可拍摄的多分镜脚本。每个分镜必须严格按以下格式输出：\n\n分镜 N：\n- 画面：[主体] + [场景]\n- 镜头：[运镜英文 id]，必须从 CM_CN_NAME 的 key 里选一个（如 dolly_in / pan_left / static_shot / zoom_in / orbit_180 等，**用下划线连接的英文 id**，便于自动识别）\n- 时长：N 秒\n- 转场：[cut / fade / dissolve]\n- 台词：[可选]\n\n用编号列表输出，每个分镜一段。',
+  script_polish: '你是一位影视剧本优化专家，擅长改进已有脚本的质量。你会从以下维度优化：1）节奏与张力（增加/减少冲突点）；2）对话自然度（让台词更像真人说话）；3）视觉化描写（用具体的画面/动作代替抽象描述）；4）人物塑造（动机、情感一致性）；5）整体结构（开端/发展/高潮/结局）。保留用户的原始创意意图，只改进表达和质量。输出时直接给出优化后的完整脚本，不要过多解释。',
+  image_reverse: 'You are a prompt engineer for an AI image generation model. Given an input image, write a concise English prompt (50-100 words) that would reproduce the image. Focus on: subject, scene/environment, visual style (e.g. photorealistic, cinematic, illustration, oil painting), lighting (e.g. soft natural light, dramatic rim light, golden hour), composition, color palette. Output ONLY the prompt text, no preamble, no labels, no quotes, no explanation.',
+  translator: '你是一位专业翻译，能在中文、英文、日文等多种语言间准确翻译。保持原文语气，术语准确。',
+};
+
+// 向对话区追加一条消息；返回 content 元素以便流式更新
+function appendTextMsg(role, content, imageUrl = '') {
+  const box = $('#textConversation');
+  if (!box) return null;
+  const placeholder = box.querySelector('.muted.small');
+  if (placeholder) placeholder.remove();
+
+  const msg = document.createElement('div');
+  msg.className = `text-msg ${role}`;
+  const roleLabels = { user: '👤 你', assistant: '🤖 助手', system: '⚙ 系统' };
+  const roleEl = document.createElement('div');
+  roleEl.className = 'text-msg-role';
+  roleEl.textContent = roleLabels[role] || role;
+  msg.appendChild(roleEl);
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.className = 'text-msg-image';
+    msg.appendChild(img);
+  }
+  const contentEl = document.createElement('div');
+  contentEl.className = 'text-msg-content';
+  contentEl.textContent = content;
+  msg.appendChild(contentEl);
+  box.appendChild(msg);
+  box.scrollTop = box.scrollHeight;
+  return contentEl;
+}
+
+function updateTextHistoryCount() {
+  $('#textHistoryCount').textContent = String(state.textHistory.length);
+}
+
+async function doGenerateText(prompt, opts = {}) {
+  // opts.role: 覆盖 select 的 role（用于 script_polish 自动链 storyboard）
+  // opts.silent: true 时不写入 chat UI/history（保留但当前未使用）
+  const roleKey = opts.role || $('#textRole').value;
+  const systemPrompt = roleKey === 'custom'
+    ? $('#textCustomRole').value.trim()
+    : (TEXT_ROLES[roleKey] || '');
+  const temperature = parseFloat($('#textTemp').value);
+  const maxTokens = parseInt($('#textMaxTokens').value);
+  const multiTurn = $('#textMultiTurn').checked;
+  const imageUrl = state.textImageUrl;
+
+  // user message：纯文本 或 文本+图片（多模态）
+  const userMsg = imageUrl
+    ? { role: 'user', content: [
+        { type: 'text', text: prompt },
+        { type: 'image_url', image_url: { url: imageUrl } },
+      ] }
+    : { role: 'user', content: prompt };
+
+  // 构造 messages：system + 多轮历史 + 当前
+  const messages = [];
+  if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+  if (multiTurn) messages.push(...state.textHistory);
+  messages.push(userMsg);
+
+  // UI：用户消息
+  appendTextMsg('user', prompt, imageUrl);
+  // UI：助手消息占位（流式更新）
+  const assistantContentEl = appendTextMsg('assistant', '');
+  if (assistantContentEl) assistantContentEl.parentElement.classList.add('streaming');
+
+  // 加 user 到历史
+  state.textHistory.push(userMsg);
+  updateTextHistoryCount();
+
+  // 清空 prompt 输入框
+  $('#prompt').value = '';
+
+  const btn = $('#btnGenerate');
+  btn.disabled = true;
+
+  try {
+    // 直接 fetch（不走 callApi，因为要流式）
+    const resp = await fetch(`${CFG.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + CFG.apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'agnes-2.0-flash',
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        stream: true,
+      }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      let err;
+      try { err = JSON.parse(text); } catch { err = { error: { message: text } }; }
+      throw new Error(err?.error?.message || `HTTP ${resp.status}`);
+    }
+
+    // 流式解析 SSE
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullContent = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === '[DONE]') continue;
+        try {
+          const chunk = JSON.parse(payload);
+          const delta = chunk.choices?.[0]?.delta?.content || '';
+          if (delta && assistantContentEl) {
+            fullContent += delta;
+            assistantContentEl.textContent = fullContent;
+            assistantContentEl.parentElement.scrollIntoView({ block: 'end' });
+          }
+        } catch { /* 忽略解析失败的 chunk */ }
+      }
+    }
+
+    if (assistantContentEl) assistantContentEl.parentElement.classList.remove('streaming');
+    state.textHistory.push({ role: 'assistant', content: fullContent });
+    updateTextHistoryCount();
+    if (!opts.silent) toast('文本生成完成', 'ok');
+
+    // === 角色联动 ===
+    // 1) storyboard 完成：从输出里自动识别运镜英文 id 并选中
+    if (roleKey === 'storyboard') {
+      const pickedId = extractAndApplyCameraMotion(fullContent);
+      if (pickedId) console.log('[Agnes][storyboard→camera]', pickedId);
+    }
+    // 2) script_polish 完成：自动调一次 storyboard 拆分分镜
+    else if (roleKey === 'script_polish' && fullContent.trim()) {
+      toast('📽️ 正在自动拆分分镜...', 'info', 1500);
+      setTimeout(() => {
+        const autoPrompt = `请把下面这段优化后的脚本拆分成多分镜脚本：\n\n${fullContent}`;
+        doGenerateText(autoPrompt, { role: 'storyboard', silent: true });
+      }, 800);
+    }
+  } catch (err) {
+    if (assistantContentEl) {
+      assistantContentEl.parentElement.classList.remove('streaming');
+      assistantContentEl.textContent = `❌ ${err.message}`;
+    }
+    console.error('[Agnes][text]', err);
+    toast('文本生成失败：' + err.message, 'err', 5000);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// 文本参数 UI 事件
+$('#textRole').onchange = (e) => {
+  $('#textCustomRoleRow').style.display = e.target.value === 'custom' ? '' : 'none';
+};
+$('#textTemp').oninput = (e) => {
+  $('#textTempVal').textContent = e.target.value;
+};
+$('#btnClearTextHistory').onclick = () => {
+  state.textHistory = [];
+  updateTextHistoryCount();
+  $('#textConversation').innerHTML = '<div class="muted small" style="text-align:center;padding:20px">还没有对话，发起第一条提问吧</div>';
+  toast('已清空对话历史', 'ok', 1500);
+};
+$('#btnTextUploadImage').onclick = () => $('#textImageInput').click();
+$('#textImageInput').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const dataUrl = await readFileAsDataURL(file);
+    state.textImageUrl = dataUrl;
+    $('#textImageBox').innerHTML = `<div class="ref-thumb" style="background-image:url('${dataUrl}');width:80px;height:80px"></div>`;
+    toast('图片已附加到下次提问', 'ok', 1500);
+  } catch (err) {
+    toast('图片读取失败：' + err.message, 'err', 5000);
+  }
+  e.target.value = '';
+};
+$('#btnTextClearImage').onclick = () => {
+  state.textImageUrl = '';
+  $('#textImageBox').innerHTML = '<span class="empty">无附加图片（纯文本对话）</span>';
+};
+
+async function reversePromptFromNode(id) {
+  const node = state.nodes.get(id);
+  if (!node) return;
+  if (node.type !== 'image') {
+    toast('视频节点暂不支持反推', 'warn');
+    return;
+  }
+  if (!node.src) {
+    toast('该节点没有图片', 'warn');
+    return;
+  }
+  // 不动左栏任何元素，不切模式，不动生成按钮
+  // 只标记节点反推中 + toast 提示
+  const oldStatus = node.status;
+  node.status = 'reversing';
+  renderNode(node);
+  toast('反推中…（不阻塞生图/生视频）', 'info', 2000);
+  try {
+    // 第一步：反推英文 prompt
+    const enPrompt = await reverseImageToPrompt(node.src);
+    if (!enPrompt) throw new Error('反推结果为空');
+    // 第二步：翻译成中文（失败也不阻塞，直接用英文）
+    let zhPrompt = '';
+    try {
+      zhPrompt = await translateToChinese(enPrompt);
+    } catch (trErr) {
+      console.warn('[Agnes][translate]', trErr);
+      toast('翻译失败，将只保留英文版', 'warn', 3000);
+    }
+    // 保存双语到 node.meta
+    node.meta = node.meta || {};
+    node.meta.enPrompt = enPrompt;
+    node.meta.zhPrompt = zhPrompt;
+    node.meta.reversedAt = Date.now();
+    // 默认填中文（无中文则填英文）到 prompt 输入框
+    const fillText = zhPrompt || enPrompt;
+    const $p = $('#prompt');
+    const existing = $p.value.trim();
+    if (existing && !confirm(`当前 prompt 输入框已有内容。\n点「确定」替换为反推结果（${zhPrompt ? '中文' : '英文'}），「取消」追加到末尾。`)) {
+      $p.value = existing + '\n\n' + fillText;
+    } else {
+      $p.value = fillText;
+    }
+    updateCameraMotionChip();
+    toast(zhPrompt ? '反推完成（中英双版已保存）' : '反推完成（仅英文）', 'ok', 2500);
+  } catch (err) {
+    console.error('[Agnes][reversePrompt]', err);
+    toast('反推失败：' + err.message, 'err', 5000);
+  } finally {
+    node.status = oldStatus;
+    renderNode(node);
+  }
+}
+
+// 节点 footer 一键切换中英文版（在 chip bar 复用同一行）
+function fillPromptFromNodeLang(id, lang) {
+  const node = state.nodes.get(id);
+  if (!node) return;
+  const text = lang === 'en' ? node.meta?.enPrompt : node.meta?.zhPrompt;
+  if (!text) { toast(`该节点没有${lang === 'en' ? '英文' : '中文'}版`, 'warn'); return; }
+  const $p = $('#prompt');
+  $p.value = text;
+  state.cmSelectedId = '';
+  const sel = $('#videoCameraMotion'); if (sel) sel.value = '';
+  updateCameraMotionChip();
+  toast(`已切换到${lang === 'en' ? '英文' : '中文'}版`, 'ok', 1200);
+}
+
+async function reGenFromNode(id) {
+  const node = state.nodes.get(id);
+  if (!node) return;
+  const seed = node.meta?.seed;
+  // 切到对应模式 + 填 prompt
+  switchMode(node.type === 'video' ? 'video' : 'image');
+  $('#prompt').value = node.prompt || '';
+  if (node.type === 'video' && seed != null) {
+    $('#videoSeed').value = String(seed);
+    toast(`已填入 prompt + seed=${seed}，点生成开始`, 'ok', 2000);
+  } else if (node.type === 'video') {
+    // 视频但没 seed：清空 seed 输入框（保证是后端随机）
+    $('#videoSeed').value = '';
+    toast('已填入 prompt（无 seed 可复用），点生成开始', 'ok', 2000);
+  } else {
+    // 图像：明确告知不可复现
+    toast('已填入 prompt（图像 API 不支持 seed，结果不可复现），点生成开始', 'warn', 3000);
+  }
+  toast('已填入 prompt + seed，点「生成」开始', 'ok', 2000);
+  // 顺便高亮按钮提示
+  $('#btnGenerate').animate(
+    [{ boxShadow: '0 0 0 0 rgba(91,139,255,0.5)' },
+     { boxShadow: '0 0 0 10px rgba(91,139,255,0)' }],
+    { duration: 800 }
+  );
+}
+
+// 失败节点一键重试：自动用原始参数重新提交，原节点保留并在右侧生成新节点
+async function retryFromNode(id) {
+  const node = state.nodes.get(id);
+  if (!node) return;
+  const params = node.meta?.sourceParams;
+  if (!params) {
+    toast('无原始参数，请手动重生成', 'warn');
+    return;
+  }
+  if (node.type === 'image') {
+    await retryImageFromParams(id, params);
+  } else {
+    await retryVideoFromParams(id, params);
+  }
+}
+
+async function retryImageFromParams(origId, params) {
+  // 解析 ref：snapshot 里的 url 找当前节点，没有就建一个 external 节点
+  const refs = [];
+  if (params.image) {
+    const srcArr = Array.isArray(params.image) ? params.image : [params.image];
+    for (const src of srcArr) {
+      const existing = [...state.nodes.values()].find(n => n.src === src);
+      if (existing) refs.push(existing.id);
+      else {
+        const tmp = createRefImageNode({ src, kind: 'external', label: '重试参考' });
+        refs.push(tmp.id);
+      }
+    }
+  }
+  // 临时切到对应模式 + 填参数（不动 prompt 字段，避免打扰用户当前编辑）
+  const oldImageMode = $('#imageMode').value;
+  const oldImageSize = $('#imageSize').value;
+  $('#imageMode').value = params.mode || 't2i';
+  $('#imageSize').value = params.size;
+  const oldImageRefIds = state.imageRefIds;
+  state.imageRefIds = refs;
+  renderImageRefBox();
+  updateImageMode();
+  try {
+    await doGenerateImage(params.prompt, { reuseNodeId: origId });
+  } finally {
+    // 恢复（doGenerateImage 完成或抛错都会执行）
+    $('#imageMode').value = oldImageMode;
+    $('#imageSize').value = oldImageSize;
+    state.imageRefIds = oldImageRefIds;
+    renderImageRefBox();
+    updateImageMode();
+  }
+}
+
+async function retryVideoFromParams(origId, params) {
+  // 校验 8n+1
+  if ((params.num_frames - 1) % 8 !== 0) {
+    toast('原始帧数不满足 8n+1 规则，请手动重生成', 'warn');
+    return;
+  }
+  // 解析档位（兼容旧的 width/height 写法）
+  let width, height, maxFrames;
+  if (params.tier && params.ratio) {
+    const wh = RESOLUTION_TABLE[params.tier][params.ratio];
+    width = wh.width; height = wh.height;
+    maxFrames = TIER_MAX_FRAMES[params.tier];
+  } else if (params.width && params.height) {
+    // 旧存档 fallback：用面积估算
+    width = params.width; height = params.height;
+    const total = width * height;
+    maxFrames = total >= 1300000 ? 169 : total >= 500000 ? 409 : 961;
+  } else {
+    toast('重试参数缺少分辨率信息，请手动重生成', 'warn');
+    return;
+  }
+  if (params.num_frames > maxFrames) {
+    toast(`原始请求帧数 ${params.num_frames} 超出当前 API 上限 ${maxFrames}，请手动重生成`, 'warn', 5000);
+    return;
+  }
+  // 解析 ref（视频图复用：找现有节点或新建 external 节点）
+  const refs = [];
+  if (params.image) {
+    const srcArr = Array.isArray(params.image) ? params.image : [params.image];
+    for (const src of srcArr) {
+      const existing = [...state.nodes.values()].find(n => n.src === src);
+      if (existing) refs.push(existing.id);
+      else {
+        const tmp = createRefImageNode({ src, kind: 'external', label: '重试参考' });
+        refs.push(tmp.id);
+      }
+    }
+  }
+
+  // 临时切到对应模式 + 填参数（与图片 retry 模式一致），finally 恢复
+  const oldVideoMode = $('#videoMode').value;
+  const oldVideoTier = $('#videoTier')?.value;
+  const oldVideoRatio = $('#videoRatio')?.value;
+  const oldVideoFrames = $('#videoFrames').value;
+  const oldVideoFps = $('#videoFps').value;
+  const oldVideoSeed = $('#videoSeed').value;
+  const oldNegativePrompt = $('#negativePrompt').value;
+  const oldVideoRefIds = state.videoRefIds;
+  const oldCmSelectedId = state.cmSelectedId;
+  const oldCmSelectValue = $('#videoCameraMotion')?.value;
+
+  $('#videoMode').value = params.mode || 't2v';
+  if (params.tier) $('#videoTier').value = params.tier;
+  if (params.ratio) $('#videoRatio').value = params.ratio;
+  $('#videoFrames').value = String(params.num_frames);
+  $('#videoFps').value = String(params.frame_rate);
+  $('#videoSeed').value = params.seed != null ? String(params.seed) : '';
+  $('#negativePrompt').value = params.negative_prompt || '';
+  state.videoRefIds = refs;
+  state.cmSelectedId = params.cameraMotion || '';
+  const cmSel = $('#videoCameraMotion');
+  if (cmSel) cmSel.value = params.cameraMotion || '';
+
+  renderVideoRefBox();
+  updateVideoMode();
+  updateDurationOptions();
+  updateResolutionHint();
+
+  try {
+    // 复用原节点 + 调用 doGenerateVideo（与图片逻辑一致）
+    await doGenerateVideo(params.prompt, { reuseNodeId: origId });
+  } finally {
+    // 恢复 UI 与 state（doGenerateVideo 完成或抛错都执行）
+    $('#videoMode').value = oldVideoMode;
+    if (oldVideoTier) $('#videoTier').value = oldVideoTier;
+    if (oldVideoRatio) $('#videoRatio').value = oldVideoRatio;
+    $('#videoFrames').value = oldVideoFrames;
+    $('#videoFps').value = oldVideoFps;
+    $('#videoSeed').value = oldVideoSeed;
+    $('#negativePrompt').value = oldNegativePrompt;
+    state.videoRefIds = oldVideoRefIds;
+    state.cmSelectedId = oldCmSelectedId;
+    if (cmSel) cmSel.value = oldCmSelectValue || '';
+    renderVideoRefBox();
+    updateVideoMode();
+    updateDurationOptions();
+    updateResolutionHint();
+  }
+}
+
+function removeNode(id, silent = false) {
+  const node = state.nodes.get(id);
+  if (!node) return;
+  state.nodes.delete(id);
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  state.videoRefIds = state.videoRefIds.filter(x => x !== id);
+  state.imageRefIds = state.imageRefIds.filter(x => x !== id);
+  removePromptPopover(id);
+  renderVideoRefBox();
+  renderImageRefBox();
+  updateImageMode();
+  updateVideoMode();
+  hideEmptyHint();
+  if (!silent) toast('节点已删除');
+}
+
+function previewNode(id) {
+  const node = state.nodes.get(id);
+  if (!node || !node.src) return;
+  const overlay = $('#previewOverlay');
+  const content = $('#previewContent');
+  content.innerHTML = node.type === 'video'
+    ? `<video src="${node.src}" controls autoplay style="max-width:90vw;max-height:85vh"></video>`
+    : `<img src="${node.src}" />`;
+  $('#previewDownload').onclick = () => downloadNode(id);
+  overlay.classList.add('open');
+}
+$('#previewClose').onclick = () => $('#previewOverlay').classList.remove('open');
+$('#previewOverlay').onclick = (e) => {
+  if (e.target === $('#previewOverlay')) $('#previewOverlay').classList.remove('open');
+};
+
+async function downloadNode(id) {
+  const node = state.nodes.get(id);
+  if (!node || !node.src) return;
+  try {
+    const resp = await fetch(node.src);
+    const blob = await resp.blob();
+    const ext = (blob.type.split('/')[1] || (node.type === 'video' ? 'mp4' : 'png')).split(';')[0];
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agnes-${node.type}-${id}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('下载已开始', 'ok');
+  } catch (err) {
+    // CORS 等原因导致 fetch 失败：直接打开链接
+    window.open(node.src, '_blank');
+    toast('已在新窗口打开（直接下载）', 'warn');
+  }
+}
+
+/* ============================
+ * 参考图 UI
+ * ============================ */
+function renderVideoRefBox() {
+  const box = $('#videoRefBox');
+  if (!state.videoRefIds.length) {
+    box.innerHTML = `<span class="empty">点击图片节点的"用作视频参考"</span>`;
+    return;
+  }
+  box.innerHTML = '';
+  state.videoRefIds.forEach(id => {
+    const n = state.nodes.get(id);
+    if (!n) return;
+    const t = document.createElement('div');
+    t.className = 'ref-thumb';
+    t.style.backgroundImage = `url("${n.src}")`;
+    t.title = n.prompt || '';
+    const x = document.createElement('button');
+    x.className = 'x'; x.textContent = '×';
+    x.onclick = () => {
+      state.videoRefIds = state.videoRefIds.filter(x => x !== id);
+      renderVideoRefBox();
+    };
+    t.appendChild(x);
+    box.appendChild(t);
+  });
+}
+function renderImageRefBox() {
+  const box = $('#imageRefBox');
+  if (!state.imageRefIds.length) {
+    box.innerHTML = `<span class="empty">点击图片节点的 ↺ 按钮添加</span>`;
+    return;
+  }
+  // 清理掉已不存在的节点 id
+  state.imageRefIds = state.imageRefIds.filter(id => state.nodes.has(id));
+  if (!state.imageRefIds.length) {
+    box.innerHTML = `<span class="empty">点击图片节点的 ↺ 按钮添加</span>`;
+    return;
+  }
+  box.innerHTML = '';
+  state.imageRefIds.forEach((id, idx) => {
+    const n = state.nodes.get(id);
+    if (!n) return;
+    const t = document.createElement('div');
+    t.className = 'ref-thumb';
+    t.style.backgroundImage = `url("${n.src}")`;
+    t.title = (idx === 0 ? '首图' : `第 ${idx + 1} 张`) + ' · ' + (n.prompt || '');
+    const x = document.createElement('button');
+    x.className = 'x'; x.textContent = '×';
+    x.onclick = () => {
+      state.imageRefIds = state.imageRefIds.filter(x => x !== id);
+      renderImageRefBox();
+      updateImageMode();
+    };
+    t.appendChild(x);
+    box.appendChild(t);
+  });
+}
+
+// 图像生成模式：t2i / i2i / multi
+const IMAGE_MODE_PLACEHOLDERS = {
+  t2i: 'A luminous floating city above a misty canyon at sunrise, cinematic realism, soft golden light',
+  i2i: 'Transform the scene into a rain-soaked cyberpunk night with neon reflections while preserving the original composition',
+  multi: 'Blend the style and subject of the first image with the color palette and lighting of the second image, create a unified composition',
+};
+
+// 按当前生成模式过滤提示词建议（7 张范例）
+function updatePromptTplVisibility() {
+  const mode = state.mode === 'image' ? $('#imageMode').value : $('#videoMode').value;
+  document.querySelectorAll('.tpl-block').forEach(el => {
+    const modes = (el.dataset.modes || '').split(',').filter(Boolean);
+    el.style.display = modes.includes(mode) ? '' : 'none';
+  });
+}
+
+function updateImageMode() {
+  const mode = $('#imageMode').value;
+  $('#prompt').placeholder = IMAGE_MODE_PLACEHOLDERS[mode] || '';
+  const label = $('#imageRefLabel');
+  const hint = $('#imageModeHint');
+  const cnt = state.imageRefIds.length;
+  if (mode === 't2i') {
+    label.textContent = '参考图（文生图不需要）';
+    hint.textContent = '文生图：纯文本生成，忽略下方参考图';
+    hint.style.color = '';
+  } else if (mode === 'i2i') {
+    label.textContent = '图生图参考（取首张）';
+    if (cnt === 0) {
+      hint.textContent = '需要 1 张参考图：点击图片节点 ↺ 按钮';
+      hint.style.color = 'var(--warn)';
+    } else {
+      hint.textContent = `将使用 ${cnt} 张中的首张作为图像输入`;
+      hint.style.color = 'var(--ok)';
+    }
+} else if (mode === 'multi') {
+    label.textContent = '多图融合参考（≥2 张）';
+    if (cnt < 2) {
+      hint.textContent = '⚠ 多图融合至少需要 2 张图';
+      hint.style.color = 'var(--err)';
+    } else {
+      hint.textContent = `✓ 共 ${cnt} 张，将作为 image 数组传入`;
+      hint.style.color = 'var(--ok)';
+    }
+  }
+  updatePromptTplVisibility();
+}
+$('#imageMode').addEventListener('change', updateImageMode);
+updateImageMode();
+
+/* ============================
+ * 模式切换 & 生成
+ * ============================ */
+$$('#modeSwitch button').forEach(btn => {
+  btn.onclick = () => switchMode(btn.dataset.mode);
+});
+function switchMode(mode) {
+  state.mode = mode;
+  $$('#modeSwitch button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  $('#imageParams').classList.toggle('hidden', mode !== 'image');
+  $('#videoParams').classList.toggle('hidden', mode !== 'video');
+  $('#textParams').classList.toggle('hidden', mode !== 'text');
+  $('#textConversationSection').style.display = mode === 'text' ? '' : 'none';
+  $('#btnGenText').textContent = mode === 'video' ? '生成视频'
+    : mode === 'text' ? '生成文本' : '生成图像';
+  updatePromptTplVisibility();
+}
+
+$('#btnGenerate').onclick = async () => {
+  const prompt = $('#prompt').value.trim();
+  if (!prompt) { toast('请输入提示词', 'warn'); return; }
+  if (state.mode === 'image') await doGenerateImage(prompt);
+  else if (state.mode === 'video') await doGenerateVideo(prompt);
+  else if (state.mode === 'text') await doGenerateText(prompt);
+};
+
+async function doGenerateImage(prompt, opts = {}) {
+  showPromptRiskWarning(prompt);   // v1.21 安全检查
+  const reuseNodeId = opts.reuseNodeId || null;
+  const size = $('#imageSize').value;
+  const mode = $('#imageMode').value;
+  const refs = state.imageRefIds
+    .map(id => state.nodes.get(id)?.src)
+    .filter(Boolean);
+
+  let image = null;
+  if (mode === 'i2i') {
+    if (refs.length === 0) {
+      toast('图生图模式需要 1 张参考图', 'warn'); return;
+    }
+    image = refs[0];
+  } else if (mode === 'multi') {
+    if (refs.length < 2) {
+      toast('多图融合模式需要至少 2 张参考图', 'warn'); return;
+    }
+    image = refs;  // 数组
+  }
+  // t2i 不传 image
+
+  const btn = $('#btnGenerate');
+  btn.disabled = true;
+  const oldText = $('#btnGenText').textContent;
+  $('#btnGenText').textContent = '生成中...';
+
+  const sourceParams = {
+    prompt, size, mode,
+    image: image ? (Array.isArray(image) ? [...image] : image) : null,
+  };
+
+  // 复用失败节点 或 创建新节点
+  let node, task;
+  if (reuseNodeId && state.nodes.has(reuseNodeId)) {
+    node = state.nodes.get(reuseNodeId);
+    task = [...state.tasks.values()].find(t => t.nodeId === reuseNodeId) || createTask('image', prompt);
+    // 重置节点 + 任务状态（复用位置）
+    node.src = null;
+    node.status = 'running';
+    node.progress = 0;
+    node.meta = { sourceParams };
+    task.prompt = prompt;
+    task.status = 'running';
+    task.progress = 0;
+    task.error = null;
+    task.nodeId = node.id;
+    renderTaskCard(task);
+    renderNode(node);
+  } else {
+    task = createTask('image', prompt);
+    const nodeX = nextNodeX();
+    const nodeY = nextNodeY();
+    node = createNode({
+      type: 'image', x: nodeX, y: nodeY, w: 320, h: 320,
+      prompt, src: null, status: 'running', progress: 0,
+      meta: { sourceParams },
+    });
+    task.nodeId = node.id;
+  }
+
+  const t0 = performance.now();
+  try {
+    // 图像 API 不支持 seed 参数（实测顶层和 extra_body.seed 都返回 422）
+    const reqBody = {
+      model: 'agnes-image-2.1-flash',
+      prompt, size,
+      extra_body: { response_format: 'url' },
+    };
+    if (image) {
+      reqBody.extra_body.image = Array.isArray(image) ? image : [image];
+    }
+    console.log('[Agnes][image] request', reqBody);
+    const resp = await callApiWithRetry('/images/generations', {
+      method: 'POST', body: JSON.stringify(reqBody),
+    }, { retries: 3, delayMs: 2500, label: '图片生成' });
+    console.log('[Agnes][image] response', resp);
+    const item = resp?.data?.[0];
+    if (!item?.url) throw new Error('响应中没有图片 URL');
+    node.src = item.url;
+    node.status = 'completed';
+    node.progress = 100;
+    node.meta = {
+      ...(node.meta || {}),
+      elapsedMs: Math.round(performance.now() - t0),
+      size,
+    };
+    if (resp?.seed != null) node.meta.seed = resp.seed;
+    if (resp?.data?.[0]?.seed != null) node.meta.seed = resp.data[0].seed;
+    renderNode(node);
+    updateTask(task.id, { status: 'completed', progress: 100 });
+    toast('图像生成完成', 'ok');
+  } catch (err) {
+    console.error(err);
+    node.status = 'failed';
+    node.meta = { ...(node.meta || {}), elapsedMs: Math.round(performance.now() - t0) };
+    renderNode(node);
+    updateTask(task.id, { status: 'failed', error: err.message });
+    toast('生成失败：' + err.message, 'err', 6000);
+  } finally {
+    btn.disabled = false;
+    $('#btnGenText').textContent = oldText;
+  }
+}
+
+async function doGenerateVideo(prompt, opts = {}) {
+  showPromptRiskWarning(prompt);   // v1.21 安全检查
+  const res = getRes();
+  const width = res.width;
+  const height = res.height;
+  const num_frames = parseInt($('#videoFrames').value);
+  const frame_rate = parseInt($('#videoFps').value);
+  const negative_prompt = $('#negativePrompt').value.trim() || undefined;
+  const seedRaw = $('#videoSeed').value.trim();
+  const seed = seedRaw === '' ? null : parseInt(seedRaw, 10);
+  // 运镜已经在 prompt 输入框里拼好了（applyCameraMotionToPrompt），直接用 prompt
+  const cameraMotion = state.cmSelectedId || '';   // 重生成时复用
+  const finalPrompt = prompt;
+
+// 校验：8n+1
+  if ((num_frames - 1) % 8 !== 0) {
+    toast('帧数需满足 8n+1（如 81/121/241/409）', 'warn');
+    return;
+  }
+  // 校验：按当前档位上限（已查表，精确）
+  if (num_frames > res.maxFrames) {
+    // 自动 clip 到最大的 8n+1 帧
+    let clipped = res.maxFrames;
+    while (clipped > 9 && (clipped - 1) % 8 !== 0) clipped--;
+    toast(`当前档位 ${res.tier}/${res.ratio} 最多 ${res.maxFrames} 帧，已自动 clip 到 ${clipped} 帧`, 'warn', 4500);
+    num_frames = clipped;
+    $('#videoFrames').value = String(clipped);
+  }
+
+  // 参考图：按模式拼 body
+  const mode = $('#videoMode').value;
+  const refs = state.videoRefIds
+    .map(id => state.nodes.get(id)?.src)
+    .filter(Boolean);
+
+const body = {
+    model: 'agnes-video-v2.0',
+    prompt: finalPrompt,    // 已拼上运镜
+    height, width, num_frames, frame_rate,
+  };
+  if (negative_prompt) body.negative_prompt = negative_prompt;
+  if (seed != null) body.seed = seed;
+
+if (mode === 'i2v') {
+    if (refs.length === 0) {
+      toast('图生视频模式需要 1 张参考图', 'warn'); return;
+    }
+    body.image = cleanBase64DataUrl(refs[0]);
+  } else if (mode === 'keyframes') {
+    if (refs.length < 2) {
+      toast('首尾帧模式需要至少 2 张参考图', 'warn'); return;
+    }
+    body.extra_body = {
+      image: refs.map(cleanBase64DataUrl),   // 首张 = 起始帧，末张 = 结束帧
+      mode: 'keyframes',
+    };
+  }
+  // t2v 不带 image 字段
+
+  const btn = $('#btnGenerate');
+  btn.disabled = true;
+  const oldText = $('#btnGenText').textContent;
+  $('#btnGenText').textContent = '创建任务中...';
+
+  const reuseNodeId = opts.reuseNodeId || null;
+  let node, task;
+  if (reuseNodeId && state.nodes.has(reuseNodeId)) {
+    // 复用原节点（与图片 retryFromNode 一致）
+    node = state.nodes.get(reuseNodeId);
+    task = [...state.tasks.values()].find(t => t.nodeId === reuseNodeId) || createTask('video', prompt);
+    node.src = null;
+    node.status = 'queued';
+    node.progress = 0;
+    node.meta = { ...(node.meta || {}), sourceParams: {
+      prompt, tier: res.tier, ratio: res.ratio,
+      num_frames, frame_rate,
+      negative_prompt, seed, mode,
+      image: refs.length ? [...refs] : null,
+      cameraMotion,
+    } };
+    task.prompt = prompt;
+    task.status = 'queued';
+    task.progress = 0;
+    task.error = null;
+    task.videoId = null;
+    task.taskId = null;
+    task.nodeId = node.id;
+    renderTaskCard(task);
+    renderNode(node);
+  } else {
+    const nodeX = nextNodeX();
+    const nodeY = nextNodeY();
+    task = createTask('video', prompt);
+    node = createNode({
+      type: 'video', x: nodeX, y: nodeY, w: 360, h: 360,
+      prompt, src: null, status: 'queued', progress: 0,
+      meta: {
+        seedRequested: seed != null ? seed : null,
+        sourceParams: {
+          prompt, tier: res.tier, ratio: res.ratio,
+          num_frames, frame_rate,
+          negative_prompt, seed, mode,
+          image: refs.length ? [...refs] : null,
+          cameraMotion,
+        },
+      },
+    });
+    task.nodeId = node.id;
+    renderTaskCard(task);
+  }
+
+  try {
+    console.log('[Agnes][video] create task request', body);
+    const resp = await createVideoTask(body);
+    console.log('[Agnes][video] create task response', resp);
+    // 解码网关伪 ID，存真正的 video_id；fallback 到 resp.id（兼容旧格式）
+    const videoId = extractRealVideoId(resp.video_id) || resp.id;
+    if (!videoId) throw new Error('未拿到 video_id');
+    task.videoId = videoId;
+    task.taskId = resp.task_id || resp.id;
+    updateTask(task.id, { status: 'queued', videoId, taskId: task.taskId });
+    toast(`视频任务已创建：${videoId}`, 'ok');
+
+    // 开始轮询
+    startPolling(task.id);
+  } catch (err) {
+    console.error(err);
+    node.status = 'failed';
+    renderNode(node);
+    updateTask(task.id, { status: 'failed', error: err.message });
+    toast('创建失败：' + err.message, 'err', 6000);
+  } finally {
+    btn.disabled = false;
+    $('#btnGenText').textContent = oldText;
+  }
+}
+
+/* ============================
+ * 视频轮询
+ * ============================ */
+const pollTimers = new Map();
+function startPolling(taskId) {
+  if (pollTimers.has(taskId)) return;
+  const tick = async () => {
+    const task = state.tasks.get(taskId);
+    if (!task || task.status === 'completed' || task.status === 'failed') {
+      pollTimers.delete(taskId);
+      return;
+    }
+    try {
+      const data = await fetchVideoStatus(task.videoId);
+      const status = data.status || 'in_progress';
+      const progress = data.progress ?? 0;
+      updateTask(taskId, { status, progress });
+      const node = state.nodes.get(task.nodeId);
+      if (node) {
+        node.status = status;
+        node.progress = progress;
+        // 中间轮询时若后端已返回 seed，也立刻同步上去
+        if (data.perf_params?.seed != null || data.request_params?.seed != null) {
+          const seedVal = data.perf_params?.seed ?? data.request_params?.seed;
+          node.meta = { ...(node.meta || {}), seed: seedVal };
+        }
+        renderNode(node);
+      }
+      if (status === 'completed') {
+        const videoUrl = extractVideoUrl(data);
+        console.log('[Agnes][poll] completed, videoUrl =', videoUrl);
+        // 提取 meta：seed / duration / 推理耗时
+        const metaPatch = {};
+        if (data.perf_params?.seed != null) metaPatch.seed = data.perf_params.seed;
+        if (data.request_params?.seed != null && metaPatch.seed == null) {
+          metaPatch.seed = data.request_params.seed;
+        }
+        if (data.seconds) metaPatch.duration = data.seconds + 's';
+        if (data.size) metaPatch.size = data.size;
+        if (data.perf_infer_s != null) metaPatch.inferSeconds = Number(data.perf_infer_s.toFixed(1));
+
+        if (videoUrl && node) {
+          node.src = videoUrl;
+          node.status = 'completed';
+          node.progress = 100;
+          node.meta = { ...(node.meta || {}), ...metaPatch };
+          renderNode(node);
+          toast('视频生成完成', 'ok');
+        } else {
+          // 完成但没拿到 URL：标红并保留节点
+          console.warn('[Agnes][poll] completed 但响应中没有视频 URL 字段', data);
+          if (node) {
+            node.status = 'no_url';
+            node.meta = { ...(node.meta || {}), ...metaPatch };
+            renderNode(node);
+          }
+          updateTask(taskId, { error: '已完成但响应中找不到视频 URL 字段（url / remixed_from_video_id）' });
+          toast('任务已完成但未返回视频 URL，请查看 Console', 'warn', 6000);
+        }
+        pollTimers.delete(taskId);
+        return;
+} else if (status === 'failed') {
+        const errMsg = data.error?.message || '生成失败';
+        if (node) {
+          node.status = 'failed';
+          node.meta = { ...(node.meta || {}), error: errMsg };
+          renderNode(node);
+        }
+        updateTask(taskId, { error: errMsg });
+        toast('视频生成失败：' + errMsg, 'err', 5000);
+        pollTimers.delete(taskId);
+        return;
+      }
+    } catch (err) {
+      console.warn('poll error', err);
+      // 不立刻失败，保持轮询
+    }
+    pollTimers.set(taskId, setTimeout(tick, CFG.pollMs));
+  };
+  pollTimers.set(taskId, setTimeout(tick, CFG.pollMs));
+}
+
+/* ============================
+ * 任务面板
+ * ============================ */
+function createTask(type, prompt) {
+  const id = 't_' + Math.random().toString(36).slice(2, 10);
+  const task = {
+    id, type, prompt,
+    status: 'running', progress: 0,
+    createdAt: Date.now(),
+  };
+  state.tasks.set(id, task);
+  renderTaskCard(task);
+  updateTaskCount();
+  return task;
+}
+function updateTask(id, patch) {
+  const t = state.tasks.get(id);
+  if (!t) return;
+  Object.assign(t, patch);
+  renderTaskCard(t);
+}
+function renderTaskCard(task) {
+  let card = document.getElementById('task-' + task.id);
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'task-' + task.id;
+    card.className = 'task-card';
+    $('#taskList').prepend(card);
+  }
+  card.className = `task-card ${task.status}`;
+  const statusLabel = ({
+    running: '运行中', queued: '排队中', in_progress: '生成中',
+    completed: '完成', failed: '失败',
+  })[task.status] || task.status;
+  card.innerHTML = `
+    <div class="task-card-head">
+      <span class="task-type ${task.type}">${task.type === 'video' ? 'VIDEO' : 'IMAGE'}</span>
+      <span class="task-status ${task.status}">${statusLabel}</span>
+    </div>
+    <div class="task-prompt">${escapeHtml(task.prompt)}</div>
+    ${task.type === 'video' ? `
+      <div class="task-progress-row">
+        <div class="task-progress-bar"><div class="task-progress-fill" style="width:${task.progress || 0}%"></div></div>
+        <div class="task-progress-text">${task.progress || 0}%</div>
+      </div>
+      ${task.videoId ? `<div class="muted small" style="margin-top:4px">${task.videoId}</div>` : ''}
+      ${task.error ? `<div class="small" style="color:var(--err);margin-top:4px">${escapeHtml(task.error)}</div>` : ''}
+    ` : ''}
+    ${task.error ? `<div class="small" style="color:var(--err);margin-top:4px">${escapeHtml(task.error)}</div>` : ''}
+  `;
+}
+function updateTaskCount() {
+  $('#taskCount').textContent = String(state.tasks.size);
+  if (state.tasks.size === 0) {
+    $('#taskList').innerHTML = `
+      <div class="empty-state">
+        <div class="em-title">暂无任务</div>
+        <div>生成记录会显示在这里</div>
+      </div>`;
+  }
+}
+
+/* ============================
+ * 设置
+ * ============================ */
+$('#btnSettings').onclick = () => {
+  $('#cfgBaseUrl').value = CFG.baseUrl;
+  $('#cfgApiKey').value = CFG.apiKey;
+  $('#cfgPollMs').value = CFG.pollMs;
+  $('#settingsModal').classList.add('open');
+};
+$('#settingsClose').onclick = () => $('#settingsModal').classList.remove('open');
+$('#btnRecover').onclick = async () => {
+  const vid = $('#cfgRecoverId').value.trim();
+  if (!vid) { toast('请输入 video_id', 'warn'); return; }
+  $('#btnRecover').disabled = true;
+  const oldText = $('#btnRecover').textContent;
+  $('#btnRecover').textContent = '查询中...';
+  try {
+    const data = await fetchVideoStatus(vid);
+    const url = extractVideoUrl(data);
+    const status = data.status || 'unknown';
+    const progress = data.progress ?? 0;
+    const task = createTask('video', data.request_params?.prompt || '(恢复任务)');
+    task.videoId = vid;
+    task.taskId = data.id || vid;
+    updateTask(task.id, { status, progress, videoId: vid });
+    const nodeX = nextNodeX();
+    const nodeY = nextNodeY();
+    const node = createNode({
+      type: 'video', x: nodeX, y: nodeY, w: 360, h: 360,
+      prompt: data.request_params?.prompt || '(恢复任务)',
+      src: url || null,
+      status: url ? 'completed' : (status === 'failed' ? 'failed' : status),
+      progress,
+    });
+    task.nodeId = node.id;
+    if (url) {
+      renderNode(node);
+      toast('已恢复：视频生成完成', 'ok');
+    } else if (status === 'failed') {
+      renderNode(node);
+      toast('该任务已失败：' + (data.error?.message || ''), 'err', 5000);
+    } else {
+      renderNode(node);
+      toast(`任务状态：${status}（${progress}%）`, 'info');
+      startPolling(task.id);
+    }
+    $('#cfgRecoverId').value = '';
+  } catch (err) {
+    console.error('[Agnes][recover]', err);
+    toast('查询失败：' + err.message, 'err', 5000);
+  } finally {
+    $('#btnRecover').disabled = false;
+    $('#btnRecover').textContent = oldText;
+  }
+};
+$('#settingsSave').onclick = () => {
+  CFG.baseUrl = $('#cfgBaseUrl').value.trim() || DEFAULTS.baseUrl;
+  CFG.apiKey = $('#cfgApiKey').value.trim() || DEFAULTS.apiKey;
+  CFG.pollMs = parseInt($('#cfgPollMs').value) || DEFAULTS.pollMs;
+  saveCfg();
+  $('#settingsModal').classList.remove('open');
+  toast('设置已保存', 'ok');
+};
+$('#settingsModal').onclick = (e) => {
+  if (e.target === $('#settingsModal')) $('#settingsModal').classList.remove('open');
+};
+$('#btnPromptHelp').onclick = () => {
+  toast('结构提示：主体 + 动作 + 场景 + 镜头 + 光线 + 风格', 'info', 4000);
+};
+
+
+
+/* ============================
+ * 保存 / 打开画布
+ * ============================ */
+const CANVAS_SCHEMA_VERSION = 1;
+const LOCAL_KEY = 'agnes.canvas.v1';
+
+function serializeCanvas() {
+  const nodes = [];
+  for (const n of state.nodes.values()) {
+    nodes.push({
+      id: n.id,
+      type: n.type,
+      x: n.x, y: n.y, w: n.w, h: n.h,
+      prompt: n.prompt || '',
+      src: n.src || null,
+      status: n.status,
+      progress: n.progress || 0,
+      createdAt: n.createdAt,
+      meta: n.meta || null,
+    });
+  }
+  return {
+    version: CANVAS_SCHEMA_VERSION,
+    app: 'agnes-studio',
+    savedAt: Date.now(),
+    view: { ...state.view },
+    nodes,
+    imageRefIds: [...state.imageRefIds],
+    videoRefIds: [...state.videoRefIds],
+    ui: {
+      mode: state.mode,
+      imageMode: $('#imageMode')?.value,
+      videoMode: $('#videoMode')?.value,
+      videoDuration: $('#videoDuration')?.value,
+      imageSize: $('#imageSize')?.value,
+videoTier: $('#videoTier')?.value,
+      videoRatio: $('#videoRatio')?.value,
+      videoFrames: $('#videoFrames')?.value,
+      videoFps: $('#videoFps')?.value,
+      videoSeed: $('#videoSeed')?.value || '',
+    },
+    tasks: [...state.tasks.values()].map(t => ({
+      id: t.id, type: t.type, prompt: t.prompt, status: t.status,
+      progress: t.progress || 0, videoId: t.videoId || null,
+      nodeId: t.nodeId || null, createdAt: t.createdAt,
+    })),
+  };
+}
+
+function applyCanvas(json, opts = {}) {
+  if (!json || typeof json !== 'object') throw new Error('JSON 内容无效');
+  if (json.app !== 'agnes-studio') {
+    if (!confirm('该文件不是 Agnes Studio 保存的画布，仍要加载吗？')) return;
+  }
+  // 清空当前
+  for (const id of [...state.nodes.keys()]) removeNode(id, true);
+  // 清掉残留任务（不恢复轮询，避免无效请求）
+  state.tasks.clear();
+  state.imageRefIds = [];
+  state.videoRefIds = [];
+  $('#taskList').innerHTML = '';
+  updateTaskCount();
+  // 停止所有轮询
+  for (const t of pollTimers.values()) clearTimeout(t);
+  pollTimers.clear();
+
+  // 视图
+  if (json.view) {
+    state.view = {
+      x: json.view.x || 0, y: json.view.y || 0,
+      scale: json.view.scale || 1,
+    };
+    applyView();
+  }
+  // 节点（带 src 校验 + 统计）
+  let loadedCount = 0;
+  let skippedCount = 0;
+  const skippedReasons = [];
+  if (Array.isArray(json.nodes)) {
+    for (const n of json.nodes) {
+      // 校验 src
+      let src = n.src || null;
+      let status = n.status || 'completed';
+      if (src && typeof src === 'string') {
+        // 必须是 http(s) URL 或 data: URI 才有效
+        const ok = src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:');
+        if (!ok) {
+          skippedReasons.push(`节点 ${n.id?.slice(0,8) || '?'} src 格式异常`);
+          src = null;
+          status = 'failed';
+        }
+      } else if (status !== 'failed' && status !== 'running') {
+        // 非 failed/running 但 src 缺失 → 视为损坏
+        skippedReasons.push(`节点 ${n.id?.slice(0,8) || '?'} 缺少图片数据`);
+        src = null;
+        status = 'failed';
+      }
+      createNode({
+        type: n.type,
+        x: n.x ?? 100, y: n.y ?? 100,
+        w: n.w ?? 320, h: n.h ?? 320,
+        prompt: n.prompt || '',
+        src,
+        status,
+        progress: n.progress || 0,
+        meta: n.meta || null,
+      });
+      loadedCount++;
+    }
+  }
+  // 参考图状态（仅保留仍存在的 id）
+  if (Array.isArray(json.imageRefIds)) {
+    state.imageRefIds = json.imageRefIds.filter(id => state.nodes.has(id));
+    renderImageRefBox();
+    updateImageMode();
+  }
+  if (Array.isArray(json.videoRefIds)) {
+    state.videoRefIds = json.videoRefIds.filter(id => state.nodes.has(id));
+    renderVideoRefBox();
+    updateVideoMode();
+  }
+  // 任务历史（仅展示，不重启轮询）
+  if (Array.isArray(json.tasks)) {
+    for (const t of json.tasks) {
+      state.tasks.set(t.id, t);
+      renderTaskCard(t);
+    }
+    updateTaskCount();
+  }
+  // UI 状态
+  if (json.ui && typeof json.ui === 'object') {
+    if (json.ui.imageMode && $('#imageMode')) $('#imageMode').value = json.ui.imageMode;
+    if (json.ui.videoMode && $('#videoMode')) $('#videoMode').value = json.ui.videoMode;
+    if (json.ui.videoDuration && $('#videoDuration')) $('#videoDuration').value = json.ui.videoDuration;
+    if (json.ui.imageSize && $('#imageSize')) $('#imageSize').value = json.ui.imageSize;
+if (json.ui.videoTier && $('#videoTier')) $('#videoTier').value = json.ui.videoTier;
+    if (json.ui.videoRatio && $('#videoRatio')) $('#videoRatio').value = json.ui.videoRatio;
+    if (json.ui.videoFrames && $('#videoFrames')) $('#videoFrames').value = json.ui.videoFrames;
+if (json.ui.videoFps && $('#videoFps')) $('#videoFps').value = json.ui.videoFps;
+    if (json.ui.videoSeed != null && $('#videoSeed')) $('#videoSeed').value = json.ui.videoSeed;
+    if (json.ui.mode) switchMode(json.ui.mode);
+    updateImageMode();
+    updateVideoMode();
+    updateDurationHint();
+    updateResolutionHint();
+    updateDurationOptions();
+  }
+  hideEmptyHint();
+  // 统计 toast
+  const tip = skippedReasons.length
+    ? `已加载 ${loadedCount} 节点，跳过 ${skippedReasons.length}：${skippedReasons.slice(0, 3).join('；')}${skippedReasons.length > 3 ? '…' : ''}`
+    : `已加载 ${loadedCount} 节点`;
+  toast(tip, skippedReasons.length ? 'warn' : 'ok', 4000);
+  setTimeout(() => fitView(), 100);
+}
+
+// 触发浏览器下载
+function downloadJson(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function timestamp() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
+// 保存 / 打开 UI
+$('#btnSave').onclick = () => {
+  $('#saveNodeCount').textContent = String(state.nodes.size);
+  $('#saveModal').classList.add('open');
+};
+$('#btnSaveClose').onclick = () => $('#saveModal').classList.remove('open');
+$('#saveModal').onclick = (e) => { if (e.target === $('#saveModal')) $('#saveModal').classList.remove('open'); };
+
+$('#btnSaveLocal').onclick = () => {
+  try {
+    const data = serializeCanvas();
+    const json = JSON.stringify(data);
+    const sizeKB = Math.round(json.length / 1024);
+    const sizeMB = (json.length / (1024 * 1024)).toFixed(2);
+    // localStorage 上限约 5MB，超过 4MB 提前警告
+    if (json.length > 4 * 1024 * 1024) {
+      if (!confirm(`存档大小 ${sizeMB} MB，浏览器 localStorage 上限通常 5MB，建议改用「下载 JSON 文件」保存。\n仍要继续保存到浏览器？`)) {
+        return;
+      }
+    }
+    localStorage.setItem(LOCAL_KEY, json);
+    console.log(`[Agnes][save] ${state.nodes.size} 节点, ${sizeKB} KB`);
+    toast(`已保存到浏览器（${state.nodes.size} 节点，${sizeKB} KB）`, 'ok');
+    $('#saveModal').classList.remove('open');
+  } catch (err) {
+    console.error('[Agnes][saveLocal]', err);
+    // QuotaExceededError 处理
+    if (err && (err.name === 'QuotaExceededError' || err.code === 22 || /quota/i.test(err.message))) {
+      toast('localStorage 空间已满！请改用「下载 JSON 文件」保存。', 'err', 6000);
+    } else {
+      toast('保存失败：' + err.message, 'err', 5000);
+    }
+  }
+};
+
+$('#btnSaveFile').onclick = () => {
+  try {
+    const data = serializeCanvas();
+    downloadJson(data, `agnes-canvas-${timestamp()}.json`);
+    toast(`已导出 JSON（${state.nodes.size} 节点）`, 'ok');
+    $('#saveModal').classList.remove('open');
+  } catch (err) {
+    console.error('[Agnes][saveFile]', err);
+    toast('导出失败：' + err.message, 'err', 5000);
+  }
+};
+
+$('#btnOpen').onclick = () => {
+  const hasLocal = !!localStorage.getItem(LOCAL_KEY);
+  $('#btnOpenLocal').disabled = !hasLocal;
+  $('#btnOpenLocal').textContent = hasLocal
+    ? `📂 从浏览器本地恢复（${hasLocal ? '有存档' : '无'}）`
+    : '📂 从浏览器本地恢复（无存档）';
+  $('#openModal').classList.add('open');
+};
+$('#btnOpenClose').onclick = () => $('#openModal').classList.remove('open');
+$('#openModal').onclick = (e) => { if (e.target === $('#openModal')) $('#openModal').classList.remove('open'); };
+
+$('#btnOpenLocal').onclick = () => {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (!raw) { toast('浏览器本地无存档', 'warn'); return; }
+    let data;
+    try { data = JSON.parse(raw); }
+    catch (parseErr) {
+      console.error('[Agnes][openLocal] JSON.parse 失败', parseErr);
+      toast('存档 JSON 解析失败，可能已损坏。建议改用 JSON 文件方式保存。', 'err', 6000);
+      return;
+    }
+    if (state.nodes.size && !confirm('当前画布有内容，加载将替换。继续？')) return;
+    applyCanvas(data);
+    $('#openModal').classList.remove('open');
+  } catch (err) {
+    console.error('[Agnes][openLocal]', err);
+    toast('加载失败：' + err.message, 'err', 5000);
+  }
+};
+
+$('#btnOpenFile').onclick = () => $('#fileInput').click();
+$('#fileInput').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (state.nodes.size && !confirm('当前画布有内容，加载将替换。继续？')) {
+      e.target.value = ''; return;
+    }
+    applyCanvas(data);
+    $('#openModal').classList.remove('open');
+  } catch (err) {
+    console.error('[Agnes][openFile]', err);
+    toast('加载失败：' + err.message, 'err', 5000);
+  } finally {
+    e.target.value = '';
+  }
+};
+
+// 启动时如有本地存档，自动恢复（用 setTimeout 延迟到所有顶层 const 初始化后执行，避开 TDZ）
+setTimeout(() => {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data?.nodes?.length) return;
+    const ageMin = Math.round((Date.now() - (data.savedAt || 0)) / 60000);
+    applyCanvas(data);
+    // 延迟 500ms 弹 toast，等 applyCanvas 完全跑完
+    setTimeout(() => {
+      toast(`已自动恢复本地存档（${data.nodes.length} 节点 · ${ageMin < 1 ? '刚刚' : ageMin + ' 分钟前'}）`, 'ok', 4000);
+    }, 500);
+  } catch (err) {
+    console.warn('[Agnes][autoRestore]', err);
+    toast('本地存档恢复失败：' + err.message, 'err', 5000);
+  }
+}, 0);
+
+/* ============================
+ * 节点排版：新节点依次错开
+ * ============================ */
+function nextNodeX() {
+  const cols = Math.max(1, Math.floor(window.innerWidth / 380));
+  const n = state.nodes.size;
+  const col = n % cols;
+  const row = Math.floor(n / cols);
+  return 80 + col * 360;
+}
+function nextNodeY() {
+  const n = state.nodes.size;
+  const cols = Math.max(1, Math.floor(window.innerWidth / 380));
+  const row = Math.floor(n / cols);
+  return 80 + row * 380;
+}
+
+/* ============================
+ * 工具函数
+ * ============================ */
+function shortTime(ts) {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+}
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+// 视频时长预设（按当前实际 API 上限调整）
+// 后端 num_frames 上限按分辨率档位：1080p=169, 720p=409, 480p=961
+const DURATION_PRESETS = {
+  '3':  { frames: 81,  fps: 24 },   // 3.4s（任意档位都支持）
+  '5':  { frames: 121, fps: 24 },   // 5.0s
+  '10': { frames: 241, fps: 24 },   // 10.0s（720p 下合法，1080p 会自动 clip）
+  '17': { frames: 409, fps: 24 },   // 17.0s（720p 上限）
+};
+
+// 运镜库（33 种，按 tab 分组）。生成时会拼到 prompt 末尾。
+// Agnes API 文档未列 camera_motion 字段，注入到 prompt 是最稳的做法。
+const CAMERA_MOTION_LABELS = {
+  static_shot: '固定机位 · 建立冷静秩序',
+  tilt_up: '镜头上摇 · 展示高度威压',
+  tilt_down: '镜头下摇 · 从环境落到人',
+  pan_left: '镜头左摇 · 横向展示空间',
+  pan_right: '镜头右摇 · 引出画外信息',
+  crane_up: '镜头上升 · 展开场景规模',
+  crane_down: '镜头下降 · 从全局聚焦',
+  truck_left: '镜头左移 · 制造空间视差',
+  truck_right: '镜头右移 · 制造空间视差',
+  dolly_in: '镜头前推 · 强调情绪靠近',
+  dolly_out: '镜头后移 · 展示人物孤独',
+  zoom_in: '变焦推进 · 突出表情反应',
+  zoom_out: '变焦拉远 · 从局部到全貌',
+  follow_tracking: '跟随拍摄 · 跟住人物行动',
+  leading_tracking: '迎面跟拍 · 保留人物表情',
+  profile_tracking: '侧面跟拍 · 强化行进节奏',
+  handheld_shot: '手持拍摄 · 增加真实紧张',
+  pov_shot: '第一视角 · 进入角色视角',
+  steadicam_walkthrough: '稳定器行进 · 平稳进入现场',
+  slider_reveal: '横滑揭示 · 从遮挡露主体',
+  foreground_wipe: '前景擦过 · 用遮挡完成切换',
+  push_through: '穿越镜头 · 穿过边界入场',
+  whip_pan: '甩摇 · 快速切换信息',
+  rack_focus: '焦点转移 · 注意力换目标',
+  crash_zoom: '急速变焦 · 放大狗血反应',
+  dolly_zoom: '希区柯克变焦 · 现实崩塌瞬间',
+  orbit_180: '环绕拍摄 · 强化人物气场',
+  ascending_orbit: '盘旋抬升 · 高光登场时刻',
+  descending_orbit: '盘旋下降 · 巨物压迫登场',
+  aerial_establishing: '高空航拍 · 建立宏大世界',
+  fpv_flythrough: '穿越机运镜 · 高速掠过空间',
+  drone_dive: '俯冲下降 · 从高空压向目标',
+  pull_away: '拉升离场 · 人变小世界变大',
+};
+const CAMERA_MOTION_GROUPS = [
+  ['基础控制', ['static_shot','tilt_up','tilt_down','pan_left','pan_right','crane_up','crane_down','truck_left','truck_right','dolly_in','dolly_out','zoom_in','zoom_out']],
+  ['人物跟拍', ['follow_tracking','leading_tracking','profile_tracking','handheld_shot','pov_shot']],
+  ['揭示转场', ['slider_reveal','foreground_wipe','push_through','whip_pan','rack_focus']],
+  ['情绪强化', ['crash_zoom','dolly_zoom']],
+  ['空间航拍', ['steadicam_walkthrough','orbit_180','ascending_orbit','descending_orbit','aerial_establishing','fpv_flythrough','drone_dive','pull_away']],
+];
+// 预览图/视频 URL（从剪映官方 CDN 抓取的运镜示范素材）
+const CM_NUMBER = {
+  static_shot: 1, tilt_up: 2, tilt_down: 3, pan_left: 4, pan_right: 5,
+  crane_up: 6, crane_down: 7, truck_left: 8, truck_right: 9, dolly_in: 10,
+  dolly_out: 11, zoom_in: 12, zoom_out: 13, follow_tracking: 14,
+  leading_tracking: 15, profile_tracking: 16, handheld_shot: 17, pov_shot: 18,
+  steadicam_walkthrough: 19, slider_reveal: 20, foreground_wipe: 21,
+  push_through: 22, whip_pan: 23, rack_focus: 24, crash_zoom: 25,
+  dolly_zoom: 26, orbit_180: 27, ascending_orbit: 28, descending_orbit: 29,
+  aerial_establishing: 30, fpv_flythrough: 31, drone_dive: 32, pull_away: 33,
+};
+const CM_CN_NAME = {
+  static_shot: '固定镜头', tilt_up: '镜头上摇', tilt_down: '镜头下摇',
+  pan_left: '镜头左摇', pan_right: '镜头右摇',
+  crane_up: '镜头上升', crane_down: '镜头下降',
+  truck_left: '镜头左移', truck_right: '镜头右移',
+  dolly_in: '镜头前推', dolly_out: '镜头后移',
+  zoom_in: '变焦推进', zoom_out: '变焦拉远',
+  follow_tracking: '跟随拍摄', leading_tracking: '迎面跟拍',
+  profile_tracking: '侧面跟拍', handheld_shot: '手持拍摄',
+  pov_shot: '第一视角', steadicam_walkthrough: '稳定器行进',
+  slider_reveal: '横滑揭示', foreground_wipe: '前景擦过',
+  push_through: '穿越镜头', whip_pan: '甩摇',
+  rack_focus: '焦点转移', crash_zoom: '急速变焦',
+  dolly_zoom: '希区柯克变焦', orbit_180: '环绕拍摄',
+  ascending_orbit: '盘旋抬升', descending_orbit: '盘旋下降',
+  aerial_establishing: '高空航拍', fpv_flythrough: '穿越机运镜',
+  drone_dive: '俯冲下降', pull_away: '拉升离场',
+};
+const CM_PREVIEW_BASE = 'https://lf-xiaoyunque.jianying.com/obj/pippit-app-buz/pippit_cms/';
+function cmPreview(id) {
+  const num = CM_NUMBER[id];
+  const cn = CM_CN_NAME[id];
+  if (!num || !cn) return { img: '', video: '' };
+  const enc = encodeURIComponent(cn);
+  return {
+    img: `${CM_PREVIEW_BASE}${String(num).padStart(2,'0')}_${enc}.webp`,
+    video: `${CM_PREVIEW_BASE}${String(num).padStart(2,'0')}_${enc}.mp4`,
+  };
+}
+
+// 选 / 切 / 取消运镜：直接拼接 "相机XX" 到 prompt 末尾（逗号分隔）
+function applyCameraMotionToPrompt(id) {
+  const $p = $('#prompt');
+  if (!$p) return;
+  let v = ($p.value || '').trimEnd();
+  // 剥离之前选中的运镜（支持切换/取消）
+  const oldId = state.cmSelectedId;
+  if (oldId && CM_CN_NAME[oldId]) {
+    v = v.replace(new RegExp(`[,\\s]*相机${CM_CN_NAME[oldId]}$`), '').trimEnd();
+  }
+  // 追加新的
+  if (id && CM_CN_NAME[id]) {
+    v = v ? `${v}, 相机${CM_CN_NAME[id]}` : `相机${CM_CN_NAME[id]}`;
+  }
+  $p.value = v;
+  state.cmSelectedId = id || '';
+  // 同步 select 值
+  const sel = $('#videoCameraMotion');
+  if (sel) sel.value = id || '';
+  updateCameraMotionChip();
+}
+
+// 从文本里识别第一个出现的运镜英文 id（CM_CN_NAME 的 key），命中后自动调用 applyCameraMotionToPrompt
+function extractAndApplyCameraMotion(text) {
+  if (!text || !window.CM_CN_NAME) return null;
+  // 按 id 长度倒序匹配（避免 dolly_in 被 dolly_in_xxx 误匹配，但实际不会有这种 key）
+  const ids = Object.keys(CM_CN_NAME);
+  for (const id of ids) {
+    if (text.includes(id)) {
+      applyCameraMotionToPrompt(id);
+      toast(`📽️ 已自动识别运镜：相机${CM_CN_NAME[id]}（${id}）`, 'ok', 3000);
+      return id;
+    }
+  }
+  return null;
+}
+
+// 已选运镜 chip 显示（从 state.cmSelectedId 读）
+function updateCameraMotionChip() {
+  const bar = $('#cameraMotionChipBar');
+  const chip = $('#cameraMotionChip');
+  if (!bar || !chip) return;
+  const id = state.cmSelectedId;
+  if (id && CM_CN_NAME[id]) {
+    chip.textContent = `🎥 相机${CM_CN_NAME[id]}`;
+    bar.style.display = 'flex';
+  } else {
+    chip.textContent = '';
+    bar.style.display = 'none';
+  }
+}
+
+// 填充运镜 select（optgroup 分组）
+(function populateCameraMotionSelect() {
+  const sel = $('#videoCameraMotion');
+  if (!sel) return;
+  for (const [groupName, ids] of CAMERA_MOTION_GROUPS) {
+    const og = document.createElement('optgroup');
+    og.label = groupName;
+    for (const id of ids) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = CAMERA_MOTION_LABELS[id] || id;
+      og.appendChild(opt);
+    }
+    sel.appendChild(og);
+  }
+})();
+
+$('#videoCameraMotion').addEventListener('change', (e) => {
+  applyCameraMotionToPrompt(e.target.value);
+});
+
+$('#btnRemoveCameraMotion').onclick = () => {
+  applyCameraMotionToPrompt('');
+  toast('已移除 prompt 中的运镜', 'ok', 1500);
+};
+
+// 实时监听 prompt 变化，更新 chip
+$('#prompt').addEventListener('input', updateCameraMotionChip);
+
+// ==================== 运镜库预览 modal ====================
+let cmCurrentTab = '全部';
+const cmTabsEl = $('#cmTabs');
+const cmGridEl = $('#cmGrid');
+
+function cmAllIds() {
+  const ids = [];
+  for (const [, arr] of CAMERA_MOTION_GROUPS) ids.push(...arr);
+  return ids;
+}
+function cmRenderTabs() {
+  const tabs = ['全部', ...CAMERA_MOTION_GROUPS.map(g => g[0])];
+  cmTabsEl.innerHTML = '';
+  for (const name of tabs) {
+    const b = document.createElement('button');
+    b.className = 'cm-tab' + (name === cmCurrentTab ? ' active' : '');
+    b.textContent = name;
+    b.onclick = () => {
+      cmCurrentTab = name;
+      cmRenderTabs();
+      cmRenderGrid();
+    };
+    cmTabsEl.appendChild(b);
+  }
+}
+function cmRenderGrid() {
+  cmGridEl.innerHTML = '';
+  const allIds = cmAllIds();
+  const ids = cmCurrentTab === '全部' ? allIds
+    : (CAMERA_MOTION_GROUPS.find(g => g[0] === cmCurrentTab)?.[1] || []);
+  // 同步 select 当前值，让卡片高亮
+  const cur = $('#videoCameraMotion').value;
+  $('#cmCount').textContent = `共 ${ids.length} 种 · 当前已选：${cur ? (CAMERA_MOTION_LABELS[cur] || cur) : '无'}`;
+  for (const id of ids) {
+    const { img, video } = cmPreview(id);
+    const card = document.createElement('div');
+    card.className = 'cm-card' + (id === cur ? ' selected' : '');
+    card.dataset.id = id;
+    const v = document.createElement('video');
+    v.src = video;
+    v.loop = true;
+    v.muted = true;
+    v.playsInline = true;
+    v.preload = 'metadata';
+    card.innerHTML = `
+      <div class="cm-thumb">
+        <img src="${img}" alt="" loading="lazy" />
+        <div class="cm-badge">✓</div>
+      </div>
+      <div class="cm-info">
+        <div class="cm-name">${escapeHtml(CM_CN_NAME[id] || id)}</div>
+        <div class="cm-desc">${escapeHtml((CAMERA_MOTION_LABELS[id] || '').split(' · ')[1] || '')}</div>
+      </div>
+    `;
+    card.querySelector('.cm-thumb').appendChild(v);
+    // hover 显式触发 play/pause（mp4 不会自动播）
+    let isHover = false;
+    card.addEventListener('mouseenter', () => {
+      isHover = true;
+      const imgEl = card.querySelector('img');
+      if (imgEl) imgEl.style.display = 'none';
+      v.style.display = 'block';
+      // 加载并尝试播放（muted 下浏览器通常允许 autoplay）
+      v.currentTime = 0;
+      const p = v.play();
+      if (p && p.catch) p.catch(() => { /* 忽略自动播放失败 */ });
+    });
+    card.addEventListener('mouseleave', () => {
+      isHover = false;
+      const imgEl = card.querySelector('img');
+      if (imgEl) imgEl.style.display = '';
+      v.pause();
+    });
+    // 如果是 touch 设备（没 mouseenter），点击切换
+    card.addEventListener('click', (ev) => {
+      // 阻止冒泡到外层 card.onclick（避免重复逻辑）
+      // 这里只处理预览切换，选中逻辑在下方 onClick 中
+    });
+    card.onclick = () => {
+      $('#videoCameraMotion').value = id;
+      applyCameraMotionToPrompt(id);
+      updateCameraMotionChip();
+      cmRenderGrid();
+      toast('已添加运镜到 prompt：' + (CM_CN_NAME[id] || id), 'ok', 1500);
+      // 1 秒后自动关闭
+      setTimeout(() => $('#cameraMotionModal').classList.remove('open'), 600);
+    };
+    cmGridEl.appendChild(card);
+  }
+}
+$('#btnCameraMotionPicker').onclick = () => {
+  cmRenderTabs();
+  cmRenderGrid();
+  $('#cameraMotionModal').classList.add('open');
+};
+$('#cmCloseBtn').onclick = () => $('#cameraMotionModal').classList.remove('open');
+$('#cmClearBtn').onclick = () => {
+  applyCameraMotionToPrompt('');
+  $('#videoCameraMotion').value = '';
+  updateCameraMotionChip();
+  cmRenderGrid();
+  toast('已清空运镜选择', 'ok', 1500);
+};
+$('#cameraMotionModal').onclick = (e) => {
+  if (e.target === $('#cameraMotionModal')) $('#cameraMotionModal').classList.remove('open');
+};
+// 初始 chip 状态
+updateCameraMotionChip();
+
+// 分辨率档位 × 宽高比 → { width, height, maxFrames }
+// max_frames 上限按后端真实规则：480p=961, 720p=409, 1080p=169（所有比例都一样）
+// width/height 是该档位+比例的标准预设尺寸（后端会自动标准化到最近预设）
+const RESOLUTION_TABLE = {
+  '480p': {
+    '16:9': { width: 854,  height: 480  },
+    '9:16': { width: 480,  height: 854  },
+    '1:1':  { width: 640,  height: 640  },
+    '4:3':  { width: 720,  height: 540  },
+    '3:4':  { width: 540,  height: 720  },
+  },
+  '720p': {
+    '16:9': { width: 1280, height: 720  },
+    '9:16': { width: 720,  height: 1280 },
+    '1:1':  { width: 832,  height: 832  },
+    '4:3':  { width: 1088, height: 832  },
+    '3:4':  { width: 832,  height: 1088 },
+  },
+  '1080p': {
+    '16:9': { width: 1920, height: 1080 },
+    '9:16': { width: 1080, height: 1920 },
+    '1:1':  { width: 1440, height: 1440 },
+    '4:3':  { width: 1440, height: 1080 },
+    '3:4':  { width: 1080, height: 1440 },
+  },
+};
+const TIER_MAX_FRAMES = { '480p': 961, '720p': 409, '1080p': 169 };
+
+function getRes() {
+  const tier = $('#videoTier').value;
+  const ratio = $('#videoRatio').value;
+  const wh = RESOLUTION_TABLE[tier][ratio];
+  return { tier, ratio, width: wh.width, height: wh.height, maxFrames: TIER_MAX_FRAMES[tier] };
+}
+
+function updateResolutionHint() {
+  const res = getRes();
+  const frames = parseInt($('#videoFrames').value) || 0;
+  const maxSec = (res.maxFrames / 24).toFixed(1);
+  $('#resSize').textContent = `${res.width}×${res.height}`;
+  $('#resMax').textContent = res.maxFrames;
+  $('#resMaxSec').textContent = maxSec;
+  const hint = $('#resolutionHint');
+  if (frames > res.maxFrames) {
+    hint.innerHTML = `预估尺寸 <b>${res.width}×${res.height}</b> · 上限 <b>${res.maxFrames}</b> 帧（≈${maxSec}s）· <span style="color:var(--err)">当前 ${frames} 超出！</span>`;
+  } else {
+    hint.innerHTML = `预估尺寸 <b>${res.width}×${res.height}</b> · 上限 <b>${res.maxFrames}</b> 帧（≈${maxSec}s）`;
+  }
+}
+
+// 时长预设 option 文字根据当前档位动态化
+function updateDurationOptions() {
+  const res = getRes();
+  const opts = $('#videoDuration').options;
+  for (const opt of opts) {
+    const v = opt.value;
+    if (v === 'custom') continue;
+    const p = DURATION_PRESETS[v];
+    if (!p) continue;
+    const sec = (p.frames / p.fps).toFixed(1);
+    const exceed = p.frames > res.maxFrames;
+    const tag = exceed ? ` · ⚠${res.maxFrames} 上限` : '';
+    opt.textContent = `约 ${sec} 秒 · ${p.frames} 帧 @ ${p.fps}fps${tag}`;
+    opt.style.color = exceed ? 'var(--warn)' : '';
+  }
+}
+
+['videoTier', 'videoRatio', 'videoFrames'].forEach(id => {
+  $('#' + id).addEventListener('input', () => {
+    updateResolutionHint();
+    updateDurationOptions();
+  });
+});
+updateResolutionHint();
+updateDurationOptions();
+
+$('#videoDuration').addEventListener('change', (e) => {
+  const v = e.target.value;
+  if (v === 'custom') { updateDurationHint(); return; }
+  const p = DURATION_PRESETS[v];
+  if (!p) return;
+  $('#videoFrames').value = p.frames;
+  $('#videoFps').value = String(p.fps);
+  updateDurationHint();
+  toast(`已套用推荐：${p.frames} 帧 @ ${p.fps}fps`, 'ok', 1500);
+});
+
+// 视频生成模式：t2v / i2v / keyframes
+const VIDEO_MODE_PLACEHOLDERS = {
+  t2v: 'A young astronaut walking across a red desert planet, dust blowing in the wind, slow cinematic tracking shot, dramatic sunset lighting, realistic sci-fi style',
+  i2v: 'The woman slowly turns around and looks back at the camera, natural facial expression, cinematic camera movement',
+  keyframes: 'Create a smooth transition from the first keyframe to the second keyframe, maintaining character identity, consistent camera angle, and natural motion between scenes',
+};
+function updateVideoMode() {
+  const mode = $('#videoMode').value;
+  // 提示词 placeholder
+  $('#prompt').placeholder = VIDEO_MODE_PLACEHOLDERS[mode] || '';
+  // 标签 + 提示
+  const label = $('#videoRefLabel');
+  const hint = $('#videoModeHint');
+  if (mode === 't2v') {
+    label.textContent = '参考图（文生视频不需要）';
+    hint.textContent = '文生视频：纯文本生成，忽略下方参考图';
+    hint.style.color = '';
+  } else if (mode === 'i2v') {
+    label.textContent = '图生视频参考（取首张）';
+    if (state.videoRefIds.length === 0) {
+      hint.textContent = '需要 1 张参考图：点击图片节点 ▶ 按钮';
+      hint.style.color = 'var(--warn)';
+    } else {
+      hint.textContent = `将使用 ${state.videoRefIds.length} 张中的首张作为图像输入`;
+      hint.style.color = 'var(--ok)';
+    }
+} else if (mode === 'keyframes') {
+    label.textContent = '首尾帧参考（≥2 张，首图=起始帧，末图=结束帧）';
+    if (state.videoRefIds.length < 2) {
+      hint.textContent = '⚠ 关键帧动画至少需要 2 张图';
+      hint.style.color = 'var(--err)';
+    } else {
+      hint.textContent = `✓ 共 ${state.videoRefIds.length} 张，将调用 keyframes 模式`;
+      hint.style.color = 'var(--ok)';
+    }
+  }
+  updatePromptTplVisibility();
+}
+$('#videoMode').addEventListener('change', updateVideoMode);
+
+// 监听参考图变化时刷新提示
+const _origRenderVideoRefBox = renderVideoRefBox;
+renderVideoRefBox = function() {
+  _origRenderVideoRefBox();
+  updateVideoMode();
+};
+updateVideoMode();
+
+function updateDurationHint() {
+  const f = parseInt($('#videoFrames').value) || 0;
+  const fps = parseInt($('#videoFps').value) || 0;
+  const sec = fps > 0 ? (f / fps).toFixed(2) : '—';
+  $('#durationHint').textContent = fps > 0 ? `≈ ${sec} 秒` : '帧率无效';
+}
+
+// 手动改帧数 / 帧率 → 自动切到自定义
+['videoFrames', 'videoFps'].forEach(id => {
+  $('#' + id).addEventListener('input', () => {
+    if ($('#videoDuration').value !== 'custom') {
+      $('#videoDuration').value = 'custom';
+    }
+    updateDurationHint();
+  });
+});
+updateDurationHint();
+
+// 初始化空状态
+hideEmptyHint();
+
+/* ============================
+ * 反推结果 popover：节点右侧浮层（v1.18 提前到这里，避开 tryAutoRestore 的 TDZ）
+ * ============================ */
+const promptPopovers = new Map();   // nodeId -> popover DOM
+const popoverLayer = document.createElement('div');
+popoverLayer.id = 'popoverLayer';
+popoverLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:50;';
+document.querySelector('.canvas-area').appendChild(popoverLayer);
+
+function ensurePromptPopover(node) {
+  const meta = node.meta || {};
+  if (!meta.zhPrompt && !meta.enPrompt) {
+    removePromptPopover(node.id);
+    return;
+  }
+  const el = document.getElementById(node.id);
+  if (!el) return;
+  let pop = promptPopovers.get(node.id);
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.className = 'prompt-popover';
+    pop.style.pointerEvents = 'auto';
+    pop.innerHTML = `
+      <div class="prompt-popover-head">
+        <span class="prompt-popover-title">⟲ 反推结果</span>
+        <button class="prompt-popover-close" data-pp-close="${node.id}" title="关闭">✕</button>
+      </div>
+      <div class="prompt-popover-body" data-pp-body></div>
+    `;
+    popoverLayer.appendChild(pop);
+    promptPopovers.set(node.id, pop);
+    pop.querySelector(`[data-pp-close="${node.id}"]`).onclick = (e) => {
+      e.stopPropagation();
+      removePromptPopover(node.id);
+    };
+  }
+  // 内容
+  const body = pop.querySelector('[data-pp-body]');
+  const zh = meta.zhPrompt || '';
+  const en = meta.enPrompt || '';
+  body.innerHTML = `
+    ${zh ? `
+      <div class="pp-section">
+        <div class="pp-lang">🇨🇳 中文</div>
+        <div class="pp-text">${escapeHtml(zh)}</div>
+        <button class="pp-use" data-pp-use="zh" data-pp-id="${node.id}">→ 填入 prompt</button>
+      </div>` : ''}
+    ${en ? `
+      <div class="pp-section">
+        <div class="pp-lang">🇺🇸 English</div>
+        <div class="pp-text">${escapeHtml(en)}</div>
+        <button class="pp-use" data-pp-use="en" data-pp-id="${node.id}">→ 填入 prompt</button>
+      </div>` : ''}
+  `;
+  body.querySelectorAll('.pp-use').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const lang = btn.dataset.ppUse;
+      fillPromptFromNodeLang(node.id, lang);
+    };
+  });
+  // 定位（节点右侧，顶部对齐）
+  positionPromptPopover(node, pop);
+}
+
+function positionPromptPopover(node, pop) {
+  const el = document.getElementById(node.id);
+  const canvas = document.querySelector('.canvas-area');
+  if (!el || !canvas) return;
+  const er = el.getBoundingClientRect();
+  const cr = canvas.getBoundingClientRect();
+  // canvas 内部坐标
+  const left = er.right - cr.left + 12;
+  const top = er.top - cr.top;
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+}
+
+function updateAllPopoverPositions() {
+  for (const [id, pop] of promptPopovers) {
+    const node = state.nodes.get(id);
+    if (node) positionPromptPopover(node, pop);
+  }
+}
+
+function removePromptPopover(id) {
+  const pop = promptPopovers.get(id);
+  if (pop) pop.remove();
+  promptPopovers.delete(id);
+}
+
+// Seed 输入：随机 / 清空
+function randSeed() { return String(Math.floor(Math.random() * 1000000)); }
+$('#btnVideoRandomSeed').onclick = () => { $('#videoSeed').value = randSeed(); };
+$('#btnVideoClearSeed').onclick = () => { $('#videoSeed').value = ''; };
+
+/* ============================
+ * 本地图片上传 / URL 添加参考图
+ * ============================ */
+async function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('读取文件失败：' + file.name));
+    r.readAsDataURL(file);
+  });
+}
+
+// 创建"参考图"节点：type=image，但 status 区分来源
+function createRefImageNode({ src, kind, label }) {
+  // 自动布局到画布空白处
+  const x = nextNodeX();
+  const y = nextNodeY();
+  const node = createNode({
+    type: 'image',
+    x, y, w: 320, h: 320,
+    prompt: label || (kind === 'uploaded' ? '本地上传' : '外部 URL'),
+    src,
+    status: kind,   // 'uploaded' | 'external'
+    progress: 100,
+    meta: { source: kind },
+  });
+  // 自动加入图像参考
+  if (!state.imageRefIds.includes(node.id)) {
+    state.imageRefIds.push(node.id);
+  }
+  renderImageRefBox();
+  updateImageMode();
+  return node;
+}
+
+// 上传本地
+$('#btnUploadLocal').onclick = () => $('#imageFileInput').click();
+$('#imageFileInput').onchange = async (e) => {
+  const files = [...(e.target.files || [])];
+  if (!files.length) return;
+  const btn = $('#btnUploadLocal');
+  btn.disabled = true;
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) {
+      toast(`跳过非图片文件：${file.name}`, 'warn');
+      continue;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast(`文件过大（>10MB）跳过：${file.name}`, 'warn');
+      continue;
+    }
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      createRefImageNode({ src: dataUrl, kind: 'uploaded', label: '本地上传：' + file.name });
+      console.log('[Agnes][upload]', file.name, file.size, 'bytes');
+    } catch (err) {
+      console.error('[Agnes][upload]', err);
+      toast(`读取失败：${file.name} - ${err.message}`, 'err', 4000);
+    }
+  }
+  toast(`已上传 ${files.length} 张图片`, 'ok');
+  btn.disabled = false;
+  e.target.value = '';
+};
+
+// 添加 URL
+$('#btnAddUrl').onclick = async () => {
+  const url = $('#urlInput').value.trim();
+  if (!url) { toast('请输入图片 URL', 'warn'); return; }
+  if (!/^https?:\/\//i.test(url)) {
+    toast('URL 必须以 http:// 或 https:// 开头', 'warn');
+    return;
+  }
+  // 用 Image() 试探是否能加载
+  const ok = await probeImage(url);
+  if (!ok) {
+    toast('图片无法访问（可能需要登录 / CORS / 404）', 'err', 5000);
+    return;
+  }
+  createRefImageNode({ src: url, kind: 'external', label: 'URL: ' + url });
+  $('#urlInput').value = '';
+  toast('已添加 URL 参考图', 'ok');
+};
+$('#urlInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('#btnAddUrl').click();
+});
+
+function probeImage(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    let done = false;
+    const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
+    img.onload = () => finish(true);
+    img.onerror = () => finish(false);
+    // 5 秒超时
+    setTimeout(() => finish(false), 5000);
+    img.src = url;
+  });
+}
+
+/* ============================
+ * 全局 Ctrl+V 粘贴图片
+ * ============================ */
+window.addEventListener('paste', async (e) => {
+  // 输入框 / 文本域里粘贴文字不拦截（让默认行为发生）
+  const ae = document.activeElement;
+  const tag = ae?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || ae?.isContentEditable) return;
+
+  const items = e.clipboardData ? [...e.clipboardData.items] : [];
+  const imageItems = items.filter(it => it.kind === 'file' && it.type.startsWith('image/'));
+  if (!imageItems.length) return;
+
+  e.preventDefault();
+  let count = 0;
+  for (const item of imageItems) {
+    const file = item.getAsFile();
+    if (!file) continue;
+    if (file.size > 10 * 1024 * 1024) {
+      toast(`粘贴图片过大（>10MB）跳过：${file.name || 'unnamed'}`, 'warn');
+      continue;
+    }
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      createRefImageNode({
+        src: dataUrl,
+        kind: 'uploaded',
+        label: '粘贴图片：' + new Date().toLocaleTimeString(),
+      });
+      count++;
+    } catch (err) {
+      console.error('[Agnes][paste]', err);
+      toast('粘贴失败：' + err.message, 'err', 4000);
+    }
+  }
+  if (count > 0) toast(`已粘贴 ${count} 张图片（已自动加入图像参考）`, 'ok');
+});
+
+// 全局错误捕获（调试用）
+window.addEventListener('error', (e) => {
+  console.error('[Agnes][error]', e.message, e.filename, e.lineno + ':' + e.colno);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('[Agnes][unhandledrejection]', e.reason);
+});
+
+// 启动日志
+console.log('%c[Agnes Studio] 启动', 'color:#5b8bff;font-weight:bold');
+console.log('[Agnes] API Base:', CFG.baseUrl, '· Key:', CFG.apiKey.slice(0, 7) + '…' + CFG.apiKey.slice(-4), '· Poll:', CFG.pollMs + 'ms');
+</script>
+</body>
+</html>
