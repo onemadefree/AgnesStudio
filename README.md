@@ -16,9 +16,9 @@
 
 ![My Agnes Studio · 图像 Demo](image_demo.png)
 
-### 🎬 视频
+### 🎬 **[▶ 点击播放 Demo 视频](./video_demo.mp4)**
 
-<video src="video_demo.mp4" controls width="100%"></video>
+> 💡 视频约 10 秒 · 2.5 MB · GitHub 不允许在 README 内联播放 mp4，点击链接浏览器内置播放器打开
 
 ---
 
