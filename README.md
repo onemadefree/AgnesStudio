@@ -12,7 +12,13 @@
 
 ## 📸 Demo
 
-![My Agnes Studio Demo](demo.png)
+### 🖼️ 图像
+
+![My Agnes Studio · 图像 Demo](image_demo.png)
+
+### 🎬 视频
+
+<video src="video_demo.mp4" controls width="100%"></video>
 
 ---
 
@@ -99,7 +105,8 @@ agnes-studio/
 ├── AGENTS.md                   ← AI 助手项目遵循文档（备份规则 / API 协议 / 变更记录）
 ├── SPEC.md                     ← 功能规格文档（数据模型 / 改点速查 / 陷阱清单）
 ├── agnes-studio.html           ← 🔴 主文件（≈152 KB / 4063 行，单文件 SPA）
-├── demo.png                    ← README 顶部 Demo 截图
+├── image_demo.png              ← README Demo 截图（界面）
+├── video_demo.mp4              ← README Demo 视频（功能演示）
 ├── docs/                       ← Agnes 官方 API 文档离线副本
 │   ├── agnes-2.0-flash.md
 │   ├── agnes-image-2.1-flash.md
