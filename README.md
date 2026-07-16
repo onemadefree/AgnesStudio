@@ -6,9 +6,20 @@
 
 一行简介：**`agnes-studio.html` 是入口文件，所有功能都在里面——把灵感 → 图 → 视频 → 文案在同一个画布上串起来。**
 
+## 🚀 在线试用
+
+👉 **<https://onemadefree.github.io/AgnesStudio/agnes-studio.html>**
+
+- 🌐 **零下载**：浏览器直接打开，无需克隆、无需构建
+- 🔐 **API Key 只存本地**（localStorage），不发给任何第三方——换电脑 / 换浏览器需重新填
+- ⚙️ **首次访问**：会弹设置面板，按提示填 `Base URL` + `API Key`（在 [Agnes 控制台](https://agnes-ai.com) 申请）
+- 🎁 **完全免费**：底层 Agnes 模型免费调用（按官方政策）
+
 ![badge: 单文件 SPA]
 ![badge: 零依赖]
 ![badge: 离线可用]
+
+---
 
 ## 📸 Demo
 
@@ -105,6 +116,7 @@ agnes-studio/
 ├── AGENTS.md                   ← AI 助手项目遵循文档（备份规则 / API 协议 / 变更记录）
 ├── SPEC.md                     ← 功能规格文档（数据模型 / 改点速查 / 陷阱清单）
 ├── agnes-studio.html           ← 🔴 主文件（≈152 KB / 4063 行，单文件 SPA）
+├── index.html                  ← GitHub Pages 根重定向(→ agnes-studio.html)
 ├── image_demo.png              ← README Demo 截图（界面）
 ├── video_demo.mp4              ← README Demo 视频（功能演示）
 ├── docs/                       ← Agnes 官方 API 文档离线副本
