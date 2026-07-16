@@ -10,6 +10,10 @@
 ![badge: 零依赖]
 ![badge: 离线可用]
 
+## 📸 Demo
+
+![My Agnes Studio Demo](demo.png)
+
 ---
 
 ## ✨ 主要功能
