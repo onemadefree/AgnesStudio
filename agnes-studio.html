@@ -1398,6 +1398,14 @@
   <div class="modal-card">
     <div class="modal-title">设置</div>
     <div class="form-row">
+      <label>站点（两站账户与 API Key 不互通）</label>
+      <select id="cfgSite">
+        <option value="intl">国际站 · apihub.agnes-ai.com</option>
+        <option value="cn">中文站 · api.agnes-ai.cn</option>
+      </select>
+      <div class="muted small" style="margin-top:4px">模型与接口两站一致；请分别使用对应站点控制台签发的 API Key（<a id="cfgSiteDocsLink" href="#" target="_blank" rel="noopener">查看当前站点文档</a>）</div>
+    </div>
+    <div class="form-row">
       <label>API Base URL</label>
       <input type="text" id="cfgBaseUrl" />
     </div>
@@ -1438,21 +1446,64 @@
 /* ============================
  * 配置 & 工具
  * ============================ */
+// 双站点（v1.35）：国际站 / 中文站。两站账户与 API Key 不互通，模型与协议一致，仅域名不同。
+const SITES = {
+  intl: {
+    label: '国际站 agnes-ai.com',
+    baseUrl: 'https://apihub.agnes-ai.com/v1',
+    console: 'https://agnes-ai.com',
+    docs: 'https://www.agnes-ai.com/zh-Hans/docs',
+  },
+  cn: {
+    label: '中文站 agnes-ai.cn',
+    baseUrl: 'https://api.agnes-ai.cn/v1',
+    console: 'https://www.agnes-ai.cn',
+    docs: 'https://www.agnes-ai.cn/zh-Hans/docs',
+  },
+};
+function normalizeSite(s) { return SITES[s] ? s : 'intl'; }
+
 const DEFAULTS = {
-  baseUrl: 'https://apihub.agnes-ai.com/v1',
-  // ⚠️ 临时默认 Key（按用户要求先用这个令牌）；用户应尽快从 Agnes 控制台重置 + 在 v1.12 移除
+  baseUrl: SITES.intl.baseUrl,
+  // ⚠️ 临时默认 Key（仅国际站可用，中文站会 401）；用户应尽快从 Agnes 控制台重置 + 移除
   apiKey: 'sk-N7ai7nAl53EdDGe6r1EjuMz4Zmt4lcnJ8Ue7o8NHZM4iefML',
   pollMs: 10000,
 };
 
+// 读取指定站点的持久化配置。
+// 兼容 v1.34 之前的单一 Key/BaseURL（agnes.apiKey / agnes.baseUrl）：视为国际站配置。
+function loadSiteCfg(site) {
+  const sKey = localStorage.getItem('agnes.apiKey.' + site);
+  const sBase = localStorage.getItem('agnes.baseUrl.' + site);
+  const legacyKey = site === 'intl' ? localStorage.getItem('agnes.apiKey') : null;
+  const legacyBase = site === 'intl' ? localStorage.getItem('agnes.baseUrl') : null;
+  return {
+    apiKey: sKey != null ? sKey
+      : legacyKey != null ? legacyKey
+      : (site === 'intl' ? DEFAULTS.apiKey : ''),
+    baseUrl: sBase != null ? sBase
+      : legacyBase != null ? legacyBase
+      : SITES[site].baseUrl,
+  };
+}
+
 const CFG = {
-  baseUrl: localStorage.getItem('agnes.baseUrl') || DEFAULTS.baseUrl,
-  apiKey: localStorage.getItem('agnes.apiKey') || DEFAULTS.apiKey,
+  site: normalizeSite(localStorage.getItem('agnes.site')),
+  baseUrl: '', apiKey: '',
   pollMs: parseInt(localStorage.getItem('agnes.pollMs')) || DEFAULTS.pollMs,
 };
+// 把当前站点的持久化配置套到 CFG（切站/保存后调用）
+function applySiteCfg() {
+  const sc = loadSiteCfg(CFG.site);
+  CFG.baseUrl = sc.baseUrl;
+  CFG.apiKey = sc.apiKey;
+}
+applySiteCfg();
+
 function saveCfg() {
-  localStorage.setItem('agnes.baseUrl', CFG.baseUrl);
-  localStorage.setItem('agnes.apiKey', CFG.apiKey);
+  localStorage.setItem('agnes.site', CFG.site);
+  localStorage.setItem('agnes.apiKey.' + CFG.site, CFG.apiKey);
+  localStorage.setItem('agnes.baseUrl.' + CFG.site, CFG.baseUrl);
   localStorage.setItem('agnes.pollMs', String(CFG.pollMs));
 }
 
@@ -1477,6 +1528,9 @@ function toast(msg, type = 'info', ms = 3000) {
  * API 调用
  * ============================ */
 async function callApi(path, opts = {}) {
+  if (!CFG.apiKey) {
+    throw new Error(`未配置 API Key（当前站点：${SITES[CFG.site].label}），请打开右上角 ⚙ 设置填写`);
+  }
   const url = path.startsWith('http') ? path : CFG.baseUrl + path;
   const resp = await fetch(url, {
     ...opts,
@@ -1608,11 +1662,12 @@ function extractRealVideoId(idOrEncoded) {
   }
 }
 
-async function fetchVideoStatus(videoId, modelName) {
+async function fetchVideoStatus(videoId, modelName, baseUrl) {
   // 用 Agnes 官方推荐的 /agnesapi?video_id= 端点（不在 /v1 路径下，单独拼接 host）
   // v2.5 系模型按官方要求带 model_name（keyframe/reference 模式必需；旧版 v2.0 不带）
+  // baseUrl：视频任务记录创建时的站点，避免中途切站后轮询打到错误站点
   const realId = extractRealVideoId(videoId);
-  const url = new URL('/agnesapi', CFG.baseUrl);
+  const url = new URL('/agnesapi', baseUrl || CFG.baseUrl);
   url.searchParams.set('video_id', realId);
   if (modelName && modelName !== 'agnes-video-v2.0') {
     url.searchParams.set('model_name', modelName);
@@ -2214,6 +2269,9 @@ async function doGenerateText(prompt, opts = {}) {
   btn.disabled = true;
 
   try {
+    if (!CFG.apiKey) {
+      throw new Error(`未配置 API Key（当前站点：${SITES[CFG.site].label}），请打开右上角 ⚙ 设置填写`);
+    }
     // 直接 fetch（不走 callApi，因为要流式）
     const resp = await fetch(`${CFG.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -3148,6 +3206,7 @@ async function doGenerateVideo(prompt, opts = {}) {
     task.videoId = null;
     task.taskId = null;
     task.modelName = isLegacy ? null : videoModel;
+    task.baseUrl = CFG.baseUrl;
     task.nodeId = node.id;
     renderTaskCard(task);
     renderNode(node);
@@ -3165,6 +3224,7 @@ async function doGenerateVideo(prompt, opts = {}) {
     });
     task.nodeId = node.id;
     task.modelName = isLegacy ? null : videoModel;
+    task.baseUrl = CFG.baseUrl;
     renderTaskCard(task);
   }
 
@@ -3207,7 +3267,7 @@ function startPolling(taskId) {
       return;
     }
     try {
-      const data = await fetchVideoStatus(task.videoId, task.modelName);
+      const data = await fetchVideoStatus(task.videoId, task.modelName, task.baseUrl);
       const status = data.status || 'in_progress';
       const progress = data.progress ?? 0;
       updateTask(taskId, { status, progress });
@@ -3341,9 +3401,27 @@ function updateTaskCount() {
 /* ============================
  * 设置
  * ============================ */
+// 设置面板：站点切换。每站独立的 Base URL / Key（按站点持久化），切换时保留未保存的编辑草稿。
+let cfgEditSite = CFG.site;
+const cfgDrafts = {};
+function fillSiteCfgInputs(site) {
+  const d = cfgDrafts[site] || loadSiteCfg(site);
+  $('#cfgSite').value = site;
+  $('#cfgBaseUrl').value = d.baseUrl;
+  $('#cfgApiKey').value = d.apiKey;
+  const link = $('#cfgSiteDocsLink');
+  if (link) link.href = SITES[site].docs;
+}
+$('#cfgSite').addEventListener('change', () => {
+  // 当前输入暂存到编辑前的站点，再载入新站点（草稿优先，无草稿用持久化值）
+  cfgDrafts[cfgEditSite] = { baseUrl: $('#cfgBaseUrl').value.trim(), apiKey: $('#cfgApiKey').value };
+  cfgEditSite = $('#cfgSite').value;
+  fillSiteCfgInputs(cfgEditSite);
+});
 $('#btnSettings').onclick = () => {
-  $('#cfgBaseUrl').value = CFG.baseUrl;
-  $('#cfgApiKey').value = CFG.apiKey;
+  cfgEditSite = CFG.site;
+  Object.keys(cfgDrafts).forEach(k => delete cfgDrafts[k]);
+  fillSiteCfgInputs(cfgEditSite);
   $('#cfgPollMs').value = CFG.pollMs;
   $('#settingsModal').classList.add('open');
 };
@@ -3363,6 +3441,7 @@ $('#btnRecover').onclick = async () => {
     task.videoId = vid;
     task.taskId = data.id || vid;
     task.modelName = $('#cfgRecoverModel')?.value || null;
+    task.baseUrl = CFG.baseUrl;
     updateTask(task.id, { status, progress, videoId: vid });
     const nodeX = nextNodeX();
     const nodeY = nextNodeY();
@@ -3395,12 +3474,14 @@ $('#btnRecover').onclick = async () => {
   }
 };
 $('#settingsSave').onclick = () => {
-  CFG.baseUrl = $('#cfgBaseUrl').value.trim() || DEFAULTS.baseUrl;
-  CFG.apiKey = $('#cfgApiKey').value.trim() || DEFAULTS.apiKey;
+  // 保存的是"当前正在编辑的站点"（cfgEditSite 跟随站点下拉）
+  CFG.site = cfgEditSite;
+  CFG.baseUrl = $('#cfgBaseUrl').value.trim() || SITES[cfgEditSite].baseUrl;
+  CFG.apiKey = $('#cfgApiKey').value.trim() || (cfgEditSite === 'intl' ? DEFAULTS.apiKey : '');
   CFG.pollMs = parseInt($('#cfgPollMs').value) || DEFAULTS.pollMs;
   saveCfg();
   $('#settingsModal').classList.remove('open');
-  toast('设置已保存', 'ok');
+  toast('设置已保存：' + SITES[CFG.site].label, 'ok');
 };
 $('#settingsModal').onclick = (e) => {
   if (e.target === $('#settingsModal')) $('#settingsModal').classList.remove('open');
@@ -3463,7 +3544,7 @@ videoTier: $('#videoTier')?.value,
     tasks: [...state.tasks.values()].map(t => ({
       id: t.id, type: t.type, prompt: t.prompt, status: t.status,
       progress: t.progress || 0, videoId: t.videoId || null,
-      modelName: t.modelName || null,
+      modelName: t.modelName || null, baseUrl: t.baseUrl || null,
       nodeId: t.nodeId || null, createdAt: t.createdAt,
     })),
   };
@@ -4515,7 +4596,7 @@ window.addEventListener('unhandledrejection', (e) => {
 
 // 启动日志
 console.log('%c[Agnes Studio] 启动', 'color:#5b8bff;font-weight:bold');
-console.log('[Agnes] API Base:', CFG.baseUrl, '· Key:', CFG.apiKey.slice(0, 7) + '…' + CFG.apiKey.slice(-4), '· Poll:', CFG.pollMs + 'ms');
+console.log('[Agnes] 站点:', SITES[CFG.site].label, '· API Base:', CFG.baseUrl, '· Key:', CFG.apiKey ? CFG.apiKey.slice(0, 7) + '…' + CFG.apiKey.slice(-4) : '(未配置)', '· Poll:', CFG.pollMs + 'ms');
 </script>
 </body>
 </html>
