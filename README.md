@@ -35,21 +35,22 @@
 
 ## ✨ 主要功能
 
-### 🎨 图像（`agnes-image-2.1-flash`）
+### 🎨 图像（`agnes-image-2.5-flash`，可切 2.1）
 - **3 种生成模式**：文生图（t2i）/ 图生图（i2i）/ 多图融合（multi）
-- **5 种预设尺寸**：含 1:1 / 16:9 / 3:2 / 3:4 / 2:3
+- **分辨率档位 × 宽高比**：1K / 2K / 3K / 4K × 1:1 / 4:3 / 3:2 / 16:9 / 9:16 / 2:3 / 3:4 / 21:9（实时预估输出尺寸）
 - 参考图：节点 ↺ 按钮、本地上传（多选）、URL、Ctrl+V 粘贴
 - 反推看图 → 英文 prompt → 译中文 → 节点右侧 popover 一键回填
 
-### 🎬 视频（`agnes-video-v2.0`）
-- **3 种生成模式**：文生视频（t2v）/ 图生视频（i2v）/ 首尾帧动画（keyframes）
-- **3 档分辨率 × 5 比例**：480p / 720p / 1080p × 16:9 / 9:16 / 1:1 / 4:3 / 3:4
-- 帧数 8n+1 校验，帧率 12/16/24/30，seed 可固定可随机
-- 反向提示词模板（3 套）一键填入
-- 异步任务自动轮询（10s 间隔可调），状态/进度条/视频 ID 实时显示
+### 🎬 视频（`agnes-video-2.5-flash` / `agnes-video-2.5` / 旧版 v2.0）
+- **新一代协议**：时长 4-12 秒 · 分辨率 720P/1080P/1K/2K · 宽高比含 21:9 超宽
+- **3 种生成模式**：文生视频（text）/ 首帧·首尾帧控制（keyframe）/ 多图参考（reference，`<Picture N>` 引用）
+- **模型下拉**：2.5 Flash（限时免费 · 仅 720P）/ 2.5（旗舰 · 按秒计费）/ v2.0（旧协议 · 免费）
+- 帧数 8n+1 校验、负向提示词模板（旧协议）；seed 可固定可随机
+- 异步任务自动轮询（间隔可调），状态/进度条/视频 ID 实时显示
 
-### 📝 文本（`agnes-2.0-flash`）
-- **流式输出（SSE）+ 多轮对话 + 图像理解**
+### 📝 文本（`agnes-2.5-flash` 默认，可切 3.0-flash / 2.5-pro）
+- **流式输出（SSE）+ 多轮对话 + 图像理解 + 思考模式开关**
+- **思考模式**：2.5 系推理模型的"💭 已深度思考"折叠展示，正文为空时友好提示
 - **6 个系统角色**：
   - 🤖 通用助手 / 🌐 翻译专家
   - 🎬 **分镜描述专家** — 按 5 段格式输出（画面 / 镜头 / 时长 / 转场 / 台词）
@@ -119,12 +120,12 @@ agnes-studio/
 ├── index.html                  ← GitHub Pages 根重定向(→ agnes-studio.html)
 ├── image_demo.png              ← README Demo 截图（界面）
 ├── video_demo.mp4              ← README Demo 视频（功能演示）
-├── docs/                       ← Agnes 官方 API 文档离线副本
-│   ├── agnes-2.0-flash.md
-│   ├── agnes-image-2.1-flash.md
-│   ├── agnes-video-v2.0.md
-│   └── llms-index.md
-└── history/                    ← 历史版本归档（v1~vN）
+├── docs/                       ← Agnes 官方 API 文档离线副本（2026-09 快照）
+│   ├── agnes-25-flash.md / agnes-30-flash.md / agnes-25-pro.md / agnes-25-pro-beta.md
+│   ├── agnes-image-25-flash.md / agnes-image-2.1-flash.md
+│   ├── agnes-video-25.md / agnes-video-25-flash.md / agnes-video-v2.0.md
+│   └── llms-index.md（文档索引）
+└── history/                    ← 历史版本归档（v1~vN，不进 git）
     └── agnes-studio-vN.html
 ```
 
@@ -146,13 +147,16 @@ agnes-studio/
 
 ---
 
-## 🔧 三模型速查
+## 🔧 模型速查（2026-09）
 
 | 模型 | 端点 | 用途 |
 |---|---|---|
-| `agnes-image-2.1-flash` | `POST /v1/images/generations` | 同步图像生成（T2I / I2I / Multi） |
-| `agnes-video-v2.0` | `POST /v1/videos` + `GET /agnesapi?video_id=` | 异步视频（T2V / I2V / Keyframes） |
-| `agnes-2.0-flash` | `POST /v1/chat/completions` | 文本聊天 + 反推 prompt + 翻译 |
+| `agnes-image-2.5-flash` | `POST /v1/images/generations` | 同步图像生成（T2I / I2I / Multi），档位 1K-4K + 8 种比例 |
+| `agnes-video-2.5-flash` / `agnes-video-2.5` | `POST /v1/videos` + `GET /agnesapi?video_id=&model_name=` | 异步视频新协议（text / keyframe / reference，4-12s） |
+| `agnes-video-v2.0` | `POST /v1/videos` + `GET /agnesapi?video_id=` | 异步视频旧协议（帧数/帧率，兼容保留） |
+| `agnes-2.5-flash`（默认）/ `agnes-3.0-flash` / `agnes-2.5-pro[-beta]` | `POST /v1/chat/completions` | 文本聊天 + 反推 prompt + 翻译 + 思考模式 |
+
+> `agnes-2.0-flash` 已被官方废弃，内部辅助调用已全部迁移到 `agnes-2.5-flash`。
 
 详细协议见 [`docs/`](./docs/)，踩坑与边界见 [`SPEC.md §13 已知陷阱`](./SPEC.md)。
 

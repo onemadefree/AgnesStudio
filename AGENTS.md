@@ -36,7 +36,7 @@
 
 ---
 
-## 3. Agnes 模型 API 集成规范
+## 3. Agnes 模型 API 集成规范（2026-09-13 升级版）
 
 ### 3.1 通用配置
 
@@ -52,85 +52,116 @@ const baseUrl = 'https://apihub.agnes-ai.com/v1';
 ```
 
 - API Key **不要硬编码**，由用户在设置面板输入后保存到 `localStorage`。
-- 所有 API 调用必须经过统一的 `callApiWithRetry`，避免散落 `fetch`。
+- 所有 API 调用必须经过统一的 `callApi / callApiWithRetry`，避免散落 `fetch`。
+- **模型选择**（v1.34 起）：三模态面板都有"模型"下拉，选择存画布 JSON 的 `ui` 字段。
 
-### 3.2 文本模型 `agnes-2.0-flash`
+### 3.2 文本模型（Chat Completions）
 
-| 项目 | 值 |
-| --- | --- |
-| 端点 | `POST /v1/chat/completions` |
-| 上下文 | 512K |
-| 用途 | 提示词改写、占位符替换、镜头动作生成、JSON 化提取 |
+| 模型 | 端点 | 上下文 | 状态 |
+| --- | --- | --- | --- |
+| `agnes-2.5-flash` | `POST /v1/chat/completions` | 512K | ✅ 默认 · GA · 当前免费 |
+| `agnes-3.0-flash` | 同上 | 512K | ✅ 可选 · 当前免费 |
+| `agnes-2.5-pro` / `agnes-2.5-pro-beta` | 同上 | 512K | 可选 · 付费（免费 Key 余额为 0 时报 `insufficient_user_quota`） |
+| ~~`agnes-2.0-flash`~~ | 同上 | — | **已废弃**，不要再用于新集成 |
 
-**常用模式**：
-- 多轮对话：`messages: [{role}, ...]`
-- 流式输出：`stream: true`
-- 工具调用：`tools: [...]`（按需启用）
-- 思考模式：`chat_template_kwargs: { enable_thinking: true }`
+**v2.5 系注意**：
+- 2.5 Flash / Pro 默认开启**思考模式**（响应含 `reasoning_content`，消耗 max_tokens）；
+  关闭方法：`chat_template_kwargs: { enable_thinking: false }`（面板有"思考模式"开关，默认关）。
+- 流式输出中 `delta.reasoning_content` 与 `delta.content` 分开到达，UI 已做折叠展示。
+- 反推/翻译等内部辅助调用固定 `enable_thinking: false` 提速。
+- 图像理解：`messages[].content` 数组混入 `{type:'image_url', image_url:{url}}`，与 2.0 相同。
 
 **提示词结构（项目里默认遵循）**：
 ```
 [角色] + [任务] + [上下文] + [要求] + [输出格式]
 ```
 
-### 3.3 图像模型 `agnes-image-2.1-flash`
+### 3.3 图像模型 `agnes-image-2.5-flash`
 
 | 项目 | 值 |
 | --- | --- |
 | 端点 | `POST /v1/images/generations` |
-| 用途 | 文生图（T2I）、图生图（I2I） |
+| 用途 | 文生图（T2I）、图生图（I2I）、多图融合（Multi） |
+| 当前价格 | 所有档位免费 |
 
 **请求结构**：
 ```jsonc
 {
-  "model": "agnes-image-2.1-flash",
+  "model": "agnes-image-2.5-flash",
   "prompt": "...",
-  "size": "1024x768",
+  "size": "1K" | "2K" | "3K" | "4K",   // 推荐档位；旧精确值如 1024x768 仍被接受
+  "ratio": "1:1" | "4:3" | "3:2" | "16:9" | "9:16" | "2:3" | "3:4" | "21:9",  // 与档位搭配
   "return_base64": true,          // 仅文生图 Base64 输出
   "extra_body": {
     "response_format": "url" | "b64_json",
-    "image": ["https://..."]      // 仅图生图;支持 URL 或 data:image/...;base64,...
+    "image": ["https://..." 或 "data:image/...;base64,..."]  // 仅图生图/多图
   }
 }
 ```
 
-**铁律**：
+**尺寸表**（1K 基准；2K/3K/4K = 1K 的 2/3/4 倍）：1:1=1024²，4:3=1152x864，16:9=1312x736，21:9=1568x672 等（完整表见 docs/agnes-image-25-flash.md）。
+
+**铁律**（与 2.1 相同）：
 - `response_format` **必须**放在 `extra_body` 内，不允许出现在请求体顶层。
 - 图生图 **不需要** 传 `tags: ["img2img"]`，只需提供 `extra_body.image`。
-- 客户端超时建议 `60s - 360s`，因为高密度图像生成较慢。
+- 不支持 seed（实测 422）。
+- 客户端超时建议 `60s - 360s`。
+- 生成图 URL 域名已变为 `platform-outputs.agnes-ai.space`（旧为 storage.googleapis.com）。
 
-**推荐提示词结构**：
-- 文生图：`[主体] + [场景/环境] + [风格] + [光照] + [构图] + [质量要求]`
-- 图生图：`[改变要求] + [新风格/场景] + [新增/移除元素] + [保留元素]`
+### 3.4 视频模型（两套协议并存）
 
-### 3.4 视频模型 `agnes-video-v2.0`
+**模型选择**（面板下拉 `#videoModel`）：
 
-视频是**异步任务**，必须两步走：
+| 模型 | 协议 | 状态 |
+| --- | --- | --- |
+| `agnes-video-2.5-flash` | **新协议 v2.5** | ✅ 默认 · 限时免费 · 仅 720P · 参考图 ≤5 |
+| `agnes-video-2.5` | **新协议 v2.5** | 旗舰 · 按秒计费（720P $0.025/s）· 支持音/视频参考 |
+| `agnes-video-v2.0` | 旧协议 | 仍可用 · 免费 · 帧数/帧率/负向词 |
+
+#### 3.4.1 新协议 v2.5（`agnes-video-2.5` / `agnes-video-2.5-flash`）
+
+视频仍是**异步任务**两步走：
 
 | 步骤 | 端点 | 说明 |
 | --- | --- | --- |
 | 1. 创建任务 | `POST /v1/videos` | 返回 `video_id` / `task_id` |
-| 2. 获取结果 | `GET /agnesapi?video_id=<VIDEO_ID>` | 推荐用法 |
-| 兼容旧版 | `GET /v1/videos/<TASK_ID>` | 仍可用，但不再推荐 |
+| 2. 获取结果 | `GET /agnesapi?video_id=<VIDEO_ID>&model_name=agnes-video-2.5[-flash]` | 官方推荐；轮询 1-2s |
 
-**任务状态**：`queued` → `in_progress` → `completed` / `failed`。
-**完成时返回的视频 URL** 在 `remixed_from_video_id` 字段。
+**请求结构**：
+```jsonc
+{
+  "model": "agnes-video-2.5-flash",
+  "prompt": "...",
+  "mode": "text" | "keyframe" | "reference",   // 必填，三选一
+  "seconds": "4" ~ "12",                        // 字符串！默认 "5"
+  "size": "720P" | "1080P" | "1K" | "2K",       // Flash 仅 720P
+  "aspect_ratio": "16:9" | "9:16" | "1:1" | "4:3" | "3:4" | "21:9",
+  "seed": 123,                                  // 可选
+  // mode=keyframe：first_frame / last_frame（URL 或 dataURI，至少一个）
+  // mode=reference：images[]（≤5 flash / ≤8 旗舰）、audios[]、videos[]（旗舰 only）
+}
+```
 
-**关键参数约束**：
-- `num_frames` 必须 ≤ 441，且满足 `8n + 1`（81 / 121 / 241 / 441）
-- 时长计算：`seconds = num_frames / frame_rate`
-- `frame_rate` 范围 `1 - 60`，推荐 `24`
-- 默认分辨率档位：`480p` / `720p` / `1080p`，支持 `16:9` / `9:16` / `1:1` / `4:3` / `3:4`
+**模式规则**（违反返回 400）：
+- `text`：纯文本；不得带任何媒体字段。
+- `keyframe`：首帧/尾帧控制；至少给 `first_frame` 或 `last_frame` 之一。
+- `reference`：图/音/视频引用；至少一个非空 `images/audios/videos`；prompt 中用 `<Picture N>`/`<Audio N>`/`<Video N>` 引用。
+- **不支持** `negative_prompt`、`num_frames`、`frame_rate`、`width/height`、像素尺寸 size（实测 `negative_prompt is not an allowed request field` 400）。
 
-**轮询策略（项目内已实现）**：
-- 创建任务后进入轮询（建议 3-5 秒间隔）
-- 用 `video_id` 查询 `GET /agnesapi?video_id=...`
-- `progress` 字段用于 UI 进度条
-- `status === 'completed'` 时取 `remixed_from_video_id` 写入节点
+**完成响应**：`status === 'completed'` 后视频 URL 在 `metadata.url` **或顶层 `url`**（两种都出现过，`extractVideoUrl` 均已兼容）。
 
-**提示词结构**：
-- 文生视频：`[主体] + [动作] + [场景] + [镜头运动] + [光线] + [风格]`
-- 图生视频：明确"哪些动、哪些保持稳定"
+**实测要点**：
+- dataURI 图片可直接用作 `first_frame`/`images`（本地上传流程可用）。
+- `model_name` 查询参数实测非强制（错值/缺省也能查到），但按官方要求带上。
+- Flash 校验在任务创建前（传错 size 直接 400 不计费）。
+
+#### 3.4.2 旧协议 v2.0（`agnes-video-v2.0`，仅旧画布/兼容保留）
+
+- `POST /v1/videos`，body 用 `height/width/num_frames/frame_rate/negative_prompt`。
+- `num_frames` 必须 ≤ 441（档位上限 480p=961/720p=409/1080p=169）且满足 `8n + 1`。
+- 轮询 `GET /agnesapi?video_id=`（**不带** model_name）。
+- 任务状态：`queued` → `in_progress` → `completed` / `failed`。
+- 网关可能返回 LiteLLM 伪 ID（`video_` + base64），用 `extractRealVideoId()` 解码。
 
 ---
 
@@ -270,12 +301,20 @@ node = {
 > 项目内所有模型协议的"权威源"。第 3 节只是提炼版，遇到边界/异常时**必须回到这里核对**。
 > 离线副本存放在 `docs/`，跟代码同步版本管理。
 
-| 模型 / 文档 | 本地副本 | 官方 URL（英文源） | 官方 URL（中文镜像） |
-| --- | --- | --- | --- |
-| **Agnes 2.0 Flash**（文本） | [`docs/agnes-2.0-flash.md`](docs/agnes-2.0-flash.md) | https://wiki.agnes-ai.com/en/docs/agnes-20-flash.md | https://agnes-ai.com/zh-Hans/docs/agnes-20-flash |
-| **Agnes Image 2.1 Flash**（图像，当前在用） | [`docs/agnes-image-2.1-flash.md`](docs/agnes-image-2.1-flash.md) | https://wiki.agnes-ai.com/en/docs/agnes-image-21-flash.md | https://agnes-ai.com/zh-Hans/docs/agnes-image-21-flash |
-| **Agnes Video V2.0**（视频，当前在用） | [`docs/agnes-video-v2.0.md`](docs/agnes-video-v2.0.md) | https://wiki.agnes-ai.com/en/docs/agnes-video-v20.md | https://agnes-ai.com/zh-Hans/docs/agnes-video-v20 |
-| 官方文档索引（llms.txt） | [`docs/llms-index.md`](docs/llms-index.md) | https://wiki.agnes-ai.com/llms.txt | — |
+| 模型 / 文档 | 本地副本 | 官方 URL（英文源） |
+| --- | --- | --- |
+| 文档索引（llms.txt，2026-09 快照） | [`docs/llms-index.md`](docs/llms-index.md) | https://wiki.agnes-ai.com/llms.txt |
+| **Agnes 2.5 Flash**（文本，默认） | [`docs/agnes-25-flash.md`](docs/agnes-25-flash.md) | https://wiki.agnes-ai.com/en/docs/agnes-25-flash.md |
+| Agnes 2.5 Pro / Pro Beta（文本，付费） | [`docs/agnes-25-pro.md`](docs/agnes-25-pro.md) / [`docs/agnes-25-pro-beta.md`](docs/agnes-25-pro-beta.md) | https://wiki.agnes-ai.com/en/docs/agnes-25-pro.md |
+| **Agnes 3.0 Flash**（文本） | [`docs/agnes-30-flash.md`](docs/agnes-30-flash.md) | https://wiki.agnes-ai.com/en/docs/agnes-30-flash.md |
+| Agnes 2.0 Flash（文本，已废弃） | [`docs/agnes-2.0-flash.md`](docs/agnes-2.0-flash.md) | https://wiki.agnes-ai.com/en/docs/agnes-20-flash.md |
+| **Agnes Image 2.5 Flash**（图像，默认） | [`docs/agnes-image-25-flash.md`](docs/agnes-image-25-flash.md) | https://wiki.agnes-ai.com/en/docs/agnes-image-25-flash.md |
+| Agnes Image 2.1 Flash（图像，上一代） | [`docs/agnes-image-2.1-flash.md`](docs/agnes-image-2.1-flash.md) | https://wiki.agnes-ai.com/en/docs/agnes-image-21-flash.md |
+| **Agnes Video 2.5 / 2.5 Flash**（视频，默认） | [`docs/agnes-video-25.md`](docs/agnes-video-25.md) / [`docs/agnes-video-25-flash.md`](docs/agnes-video-25-flash.md) | https://wiki.agnes-ai.com/en/docs/agnes-video-25.md |
+| Agnes Video V2.0（视频，旧协议） | [`docs/agnes-video-v2.0.md`](docs/agnes-video-v2.0.md) | https://wiki.agnes-ai.com/en/docs/agnes-video-v20.md |
+| Overview / Quickstart | [`docs/overview.md`](docs/overview.md) / [`docs/quickstart.md`](docs/quickstart.md) | https://wiki.agnes-ai.com/en/docs/overview.md |
+
+> 中文镜像：`https://www.agnes-ai.com/zh-Hans/docs/<同名页面>`。
 
 ### 维护约定
 
@@ -352,4 +391,5 @@ node = {
 | v1.31 | 2026-07-16 | 视频链接跳转到 Issue #1（绕过 GitHub 屏蔽 `<video>` 标签 + mp4 直链）：① README.md `### 🎬` 行的链接从 `./video_demo.mp4` 改为 `https://github.com/onemadefree/AgnesStudio/issues/1`；② Issue #1 已上传 video_demo.mp4 附件，Issue 页面 GitHub 原生支持 video 标签渲染，用户能看到可播放视频；③ 同步文案"点击观看"；④ 由于 HTTPS push 被 GFW 阻断，改用 GitHub Contents API 直接 PUT 文件（绕开 git 协议）；⑤ SSH push 也被拒（Permission denied），原因待排查 |
 | v1.32 | 2026-07-16 | 启用 GitHub Pages 直接托管 `agnes-studio.html`：① `POST /repos/.../pages` API 启用 Pages（source: main / root）；② 添加根目录 `index.html`（meta refresh + window.location.replace）重定向到 `agnes-studio.html`（GitHub Pages 默认 fallback 显示 README，不符合"直接给用户用"诉求）；③ 用户访问 `https://onemadefree.github.io/AgnesStudio/` 自动跳到 `agnes-studio.html` 主文件（HTTP 200 / 完整渲染验证通过）；④ 部署走 Contents API 绕过 GFW 对 git 协议 443 的阻断 |
 | v1.33 | 2026-07-16 | README 顶部新增"🚀 在线试用"区块（不动 `agnes-studio.html`）：① README.md 在一行简介之后、badges 之前插入 GitHub Pages 直链 `https://onemadefree.github.io/AgnesStudio/agnes-studio.html`；② 附 4 条说明（零下载 / API Key 本地 / 首次访问提示 / 完全免费）；③ 文件结构树补充 `index.html` 注释（GitHub Pages 根重定向） |
+| v1.34 | 2026-09-13 | **模型大版本升级（对齐官方 2026-09 文档）**：① 文本——新增模型下拉（`agnes-2.5-flash` 默认 / `agnes-3.0-flash` / `agnes-2.5-pro` / `agnes-2.5-pro-beta`），内部辅助（反推/翻译）迁到 2.5-flash 并关思考；处理 2.5 系 `reasoning_content` 流式展示（折叠"💭 已深度思考"）；新增"思考模式"开关（`chat_template_kwargs.enable_thinking`）；空正文（思考耗尽 max_tokens）友好提示。② 图像——默认模型迁到 `agnes-image-2.5-flash`；尺寸选择改为"档位 1K/2K/3K/4K + 宽高比 8 种"，带预估尺寸提示；旧存档精确尺寸自动映射档位。③ 视频——新增模型下拉（`agnes-video-2.5-flash` 默认 / `agnes-video-2.5` / 旧版 `agnes-video-v2.0`），**新协议**：`mode(text/keyframe/reference) + seconds("4"-"12") + size(720P/1080P/1K/2K) + aspect_ratio(含 21:9)`，Flash 锁 720P、参考图 ≤5；旧协议参数组（帧数/帧率/负向词）仅旧模型显示；轮询按任务带 `model_name`；`extractVideoUrl` 兼容 `metadata.url`；重试/恢复/序列化全链路双协议兼容；恢复面板加模型选择。④ 文档——同步 9 份官方新文档到 `docs/`、刷新 `docs/llms-index.md`、重写本文件 §3。⑤ 测试——curl 逐模型实测（文本 4 / 图像 2 / 视频 3 + dataURI keyframe + negative_prompt 400 行为）；Playwright 端到端：面板状态、文本流式、图像生成、UI 视频生成全链路全部通过。修改前快照 `history/agnes-studio-v2.html`。**注意**：本 Key 余额 $0，`agnes-2.5-pro`/-beta 实测返回 `insufficient_user_quota`，UI 保留选项但免费 Key 不可用 |
 |
