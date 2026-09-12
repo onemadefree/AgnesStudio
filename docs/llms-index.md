@@ -29,6 +29,8 @@ note: 官方文档索引；包含所有模型的入口和集成指南链接。�
 集成指南（OpenClaw / Claude CLI / Cherry Studio 等 cid1-cid8）见 https://wiki.agnes-ai.com/llms.txt ，按需下载。
 
 > 维护说明：当官方更新 API 协议或新增模型时，用 `curl https://wiki.agnes-ai.com/en/docs/<file>.md` 覆盖本地副本，并在 AGENTS.md 变更记录里登记日期。
+>
+> 🌐 **中文站镜像**：`https://wiki.agnes-ai.cn/zh-Hans/docs/<page>.md`（API 域名 `api.agnes-ai.cn`，人民币计价，协议与国际站一致、Key 不互通）。中文站文档离线副本存放在 `docs/cn/`（2026-09-13 下载：overview / quickstart / 2.5-flash / 3.0-flash / image-25-flash / video-25 / video-25-flash / pricing）。
 
 ---
 
