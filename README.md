@@ -94,10 +94,11 @@ open agnes-studio.html              # macOS
 
 ```bash
 # 2. 配置 API（首次打开自动弹设置面板）
-# 进入 [⚙ 设置] 填写：
-#   - Base URL:   https://apihub.agnes-ai.com/v1
-#   - API Key:    sk-xxxxx...（从 Agnes 控制台拿）
-#   - 轮询间隔:   10000ms（视频任务）
+# 进入 [⚙ 设置]，先选站点，再填对应 Key：
+#   - 站点:      国际站 apihub.agnes-ai.com / 中文站 api.agnes-ai.cn
+#                （两站账户与 API Key 不互通，模型与接口一致）
+#   - API Key:   sk-xxxxx...（从对应站点控制台拿）
+#   - 轮询间隔:  10000ms（视频任务）
 ```
 
 ```bash
@@ -124,6 +125,7 @@ agnes-studio/
 │   ├── agnes-25-flash.md / agnes-30-flash.md / agnes-25-pro.md / agnes-25-pro-beta.md
 │   ├── agnes-image-25-flash.md / agnes-image-2.1-flash.md
 │   ├── agnes-video-25.md / agnes-video-25-flash.md / agnes-video-v2.0.md
+│   ├── cn/（中文站文档副本 · api.agnes-ai.cn）
 │   └── llms-index.md（文档索引）
 └── history/                    ← 历史版本归档（v1~vN，不进 git）
     └── agnes-studio-vN.html
@@ -157,6 +159,8 @@ agnes-studio/
 | `agnes-2.5-flash`（默认）/ `agnes-3.0-flash` / `agnes-2.5-pro[-beta]` | `POST /v1/chat/completions` | 文本聊天 + 反推 prompt + 翻译 + 思考模式 |
 
 > `agnes-2.0-flash` 已被官方废弃，内部辅助调用已全部迁移到 `agnes-2.5-flash`。
+>
+> 🌐 **双站点**：设置面板可切换 国际站（`apihub.agnes-ai.com`）/ 中文站（`api.agnes-ai.cn`）。两站模型与接口一致，但**账户与 API Key 不互通**；中文站按人民币计价（文档离线副本在 `docs/cn/`）。视频任务按创建时所在站点轮询，中途切站不影响进行中的任务。
 
 详细协议见 [`docs/`](./docs/)，踩坑与边界见 [`SPEC.md §13 已知陷阱`](./SPEC.md)。
 

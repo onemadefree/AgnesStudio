@@ -38,11 +38,18 @@
 
 ## 3. Agnes 模型 API 集成规范（2026-09-13 升级版）
 
-### 3.1 通用配置
+### 3.1 通用配置与站点切换（v1.35）
+
+**双站点**（两站账户与 API Key 不互通，模型与协议一致，仅域名不同）：
+
+| 站点 | Base URL | 说明 |
+| --- | --- | --- |
+| 国际站 | `https://apihub.agnes-ai.com/v1` | 默认站点；文档 https://www.agnes-ai.com/zh-Hans/docs |
+| 中文站 | `https://api.agnes-ai.cn/v1` | 文档 https://www.agnes-ai.cn/zh-Hans/docs （离线副本在 `docs/cn/`，人民币计价） |
 
 ```js
-// agnes-studio.html 中已固化
-const baseUrl = 'https://apihub.agnes-ai.com/v1';
+// 代码中的常量（agnes-studio.html）
+const SITES = { intl: {...}, cn: {...} };   // label / baseUrl / console / docs
 
 // 请求头（每次请求必带）
 {
@@ -53,6 +60,11 @@ const baseUrl = 'https://apihub.agnes-ai.com/v1';
 
 - API Key **不要硬编码**，由用户在设置面板输入后保存到 `localStorage`。
 - 所有 API 调用必须经过统一的 `callApi / callApiWithRetry`，避免散落 `fetch`。
+- **站点配置存储**（按站隔离）：`agnes.site`（当前站点）+ `agnes.apiKey.<site>` / `agnes.baseUrl.<site>`；
+  v1.34 之前的旧键 `agnes.apiKey` / `agnes.baseUrl` 会被读取并视为国际站配置（一次性迁移，见 `loadSiteCfg`）。
+  `CFG.baseUrl` / `CFG.apiKey` 始终反映**当前激活站点**的值；设置面板切站时用 `cfgDrafts` 保留未保存的编辑。
+- **视频任务跨站安全**：任务创建时记录 `task.baseUrl`（+ 序列化），轮询 `fetchVideoStatus(videoId, modelName, task.baseUrl)`
+  按创建时的站点查询，避免长任务期间切站打到错误域名。
 - **模型选择**（v1.34 起）：三模态面板都有"模型"下拉，选择存画布 JSON 的 `ui` 字段。
 
 ### 3.2 文本模型（Chat Completions）
@@ -392,4 +404,5 @@ node = {
 | v1.32 | 2026-07-16 | 启用 GitHub Pages 直接托管 `agnes-studio.html`：① `POST /repos/.../pages` API 启用 Pages（source: main / root）；② 添加根目录 `index.html`（meta refresh + window.location.replace）重定向到 `agnes-studio.html`（GitHub Pages 默认 fallback 显示 README，不符合"直接给用户用"诉求）；③ 用户访问 `https://onemadefree.github.io/AgnesStudio/` 自动跳到 `agnes-studio.html` 主文件（HTTP 200 / 完整渲染验证通过）；④ 部署走 Contents API 绕过 GFW 对 git 协议 443 的阻断 |
 | v1.33 | 2026-07-16 | README 顶部新增"🚀 在线试用"区块（不动 `agnes-studio.html`）：① README.md 在一行简介之后、badges 之前插入 GitHub Pages 直链 `https://onemadefree.github.io/AgnesStudio/agnes-studio.html`；② 附 4 条说明（零下载 / API Key 本地 / 首次访问提示 / 完全免费）；③ 文件结构树补充 `index.html` 注释（GitHub Pages 根重定向） |
 | v1.34 | 2026-09-13 | **模型大版本升级（对齐官方 2026-09 文档）**：① 文本——新增模型下拉（`agnes-2.5-flash` 默认 / `agnes-3.0-flash` / `agnes-2.5-pro` / `agnes-2.5-pro-beta`），内部辅助（反推/翻译）迁到 2.5-flash 并关思考；处理 2.5 系 `reasoning_content` 流式展示（折叠"💭 已深度思考"）；新增"思考模式"开关（`chat_template_kwargs.enable_thinking`）；空正文（思考耗尽 max_tokens）友好提示。② 图像——默认模型迁到 `agnes-image-2.5-flash`；尺寸选择改为"档位 1K/2K/3K/4K + 宽高比 8 种"，带预估尺寸提示；旧存档精确尺寸自动映射档位。③ 视频——新增模型下拉（`agnes-video-2.5-flash` 默认 / `agnes-video-2.5` / 旧版 `agnes-video-v2.0`），**新协议**：`mode(text/keyframe/reference) + seconds("4"-"12") + size(720P/1080P/1K/2K) + aspect_ratio(含 21:9)`，Flash 锁 720P、参考图 ≤5；旧协议参数组（帧数/帧率/负向词）仅旧模型显示；轮询按任务带 `model_name`；`extractVideoUrl` 兼容 `metadata.url`；重试/恢复/序列化全链路双协议兼容；恢复面板加模型选择。④ 文档——同步 9 份官方新文档到 `docs/`、刷新 `docs/llms-index.md`、重写本文件 §3。⑤ 测试——curl 逐模型实测（文本 4 / 图像 2 / 视频 3 + dataURI keyframe + negative_prompt 400 行为）；Playwright 端到端：面板状态、文本流式、图像生成、UI 视频生成全链路全部通过。修改前快照 `history/agnes-studio-v2.html`。**注意**：本 Key 余额 $0，`agnes-2.5-pro`/-beta 实测返回 `insufficient_user_quota`，UI 保留选项但免费 Key 不可用 |
+| v1.35 | 2026-09-13 | **双站点支持（国际站 / 中文站）**：① 调研——中文站文档在 `wiki.agnes-ai.cn`（离线副本存 `docs/cn/`），模型清单与 API 协议与国际站完全一致，仅域名不同（`api.agnes-ai.cn` vs `apihub.agnes-ai.com`）、人民币计价；实测国际站 Key 调中文站返回 401「无效的令牌」，**两站 Key 不互通**。② 实现——新增 `SITES` 常量 + `loadSiteCfg/applySiteCfg`：按站独立持久化 `agnes.apiKey.<site>` / `agnes.baseUrl.<site>`，旧单一配置自动迁移为国际站；`CFG.baseUrl/apiKey` 始终反映激活站点；设置面板新增站点下拉，切换时 `cfgDrafts` 保留未保存编辑，附当前站点文档链接。③ 跨站安全——视频任务创建时记录 `task.baseUrl`（随画布序列化），轮询按创建时站点查询；未配置 Key 时 `callApi`/文本生成给出明确中文提示（带当前站点名）。④ 测试——Playwright 19 项站点切换用例全过（切站联动/草稿保持/持久化/请求落对域名/中文站 401 优雅显示/切回生成恢复/旧配置迁移），原有 17 项回归 + UI 视频全链路复跑通过。修改前快照 `history/agnes-studio-v3.html` |
 |
